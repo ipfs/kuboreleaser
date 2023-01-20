@@ -4,8 +4,6 @@ KuboReleaser is a CLI tool intended to help with the automation of [the release 
 
 It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is now being extracted into its own repo.
 
-It is not yet usable since none of the commands are hooked up to the CLI App.
-
 ## TODO
 
 - [ ] imlement exponential backoff to recover from `CheckErrorWait` errors
