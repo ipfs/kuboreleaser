@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -25,6 +26,7 @@ type CutBranch struct {
 	defaultVersion string
 	releaseVersion string
 	versionFile    string
+	prerelease     bool
 }
 
 func NewCutBranch(git *git.Client, github *github.Client, version *util.Version) (*CutBranch, error) {
@@ -49,6 +51,7 @@ func NewCutBranch(git *git.Client, github *github.Client, version *util.Version)
 		defaultVersion: devVersion[1:],      // check for v prefix
 		releaseVersion: version.Version[1:], // check for v prefix
 		versionFile:    "version.go",
+		prerelease:     version.Prerelease() != "",
 	}, nil
 }
 
@@ -58,7 +61,12 @@ func (ctx CutBranch) Check() error {
 		return err
 	}
 
-	if !strings.Contains(*file.Content, ctx.releaseVersion) {
+	content, err := base64.StdEncoding.DecodeString(*file.Content)
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(string(content[:]), fmt.Sprintf("\"%s\"", ctx.releaseVersion)) {
 		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("version file does not contain release version")}
 	}
 
@@ -97,6 +105,13 @@ func (ctx CutBranch) Check() error {
 		}
 	}
 
+	if !ctx.prerelease && !pr.GetMerged() {
+		return &util.CheckError{
+			Action: util.CheckErrorWait,
+			Err:    fmt.Errorf("PR is not merged yet"),
+		}
+	}
+
 	return nil
 }
 
@@ -106,9 +121,14 @@ func (ctx CutBranch) UpdateVersionFile(head, sha, base, version, title, body str
 		return err
 	}
 
-	if !strings.Contains(*versionFile.Content, version) {
+	content, err := base64.StdEncoding.DecodeString(*versionFile.Content)
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(string(content[:]), fmt.Sprintf("\"%s\"", version)) {
 		cmd := git.Command{Name: "sed", Args: []string{"-i", fmt.Sprintf("s/const CurrentVersionNumber = \".*\"/const CurrentVersionNumber = \"%s\"/g", version), ctx.versionFile}}
-		err = ctx.git.CloneExecCommitAndPush(ctx.owner, ctx.repo, head, sha, ctx.versionFile, fmt.Sprintf("chore: update %s", ctx.versionFile), cmd)
+		err = ctx.git.WithCloneExecCommitAndPush(ctx.owner, ctx.repo, head, sha, ctx.versionFile, fmt.Sprintf("chore: update %s", ctx.versionFile), cmd)
 		if err != nil {
 			return err
 		}
@@ -129,7 +149,12 @@ func (ctx CutBranch) Run() error {
 		return err
 	}
 
-	if !strings.Contains(*defaultVersionFile.Content, ctx.defaultVersion) {
+	content, err := base64.StdEncoding.DecodeString(*defaultVersionFile.Content)
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(string(content[:]), fmt.Sprintf("\"%s\"", ctx.defaultVersion)) {
 		defaultHead, err := ctx.github.GetOrCreateBranch(ctx.owner, ctx.repo, ctx.defaultHead, ctx.defaultBase)
 		if err != nil {
 			return err
@@ -141,5 +166,5 @@ func (ctx CutBranch) Run() error {
 		}
 	}
 
-	return ctx.UpdateVersionFile(ctx.releaseHead, releaseHead.GetCommit().GetSHA(), ctx.releaseBase, ctx.releaseVersion, ctx.releaseTitle, ctx.releaseBody, true)
+	return ctx.UpdateVersionFile(ctx.releaseHead, releaseHead.GetCommit().GetSHA(), ctx.releaseBase, ctx.releaseVersion, ctx.releaseTitle, ctx.releaseBody, ctx.prerelease)
 }

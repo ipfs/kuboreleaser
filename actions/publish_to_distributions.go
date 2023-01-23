@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -39,7 +40,7 @@ func NewPublishToDistributions(git *git.Client, github *github.Client, version *
 		version:      version.Version,
 		versionsFile: "dists/kubo/versions",
 		glob:         "dists/*/versions",
-		distFile:     "dist.sh",
+		distFile:     "./dist.sh",
 	}, nil
 }
 
@@ -49,7 +50,12 @@ func (ctx PublishToDistributions) Check() error {
 		return err
 	}
 
-	if strings.Contains(*versionsFile.Content, ctx.version) {
+	content, err := base64.StdEncoding.DecodeString(*versionsFile.Content)
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(string(content[:]), fmt.Sprintf("%s\n", ctx.version)) {
 		runs, err := ctx.github.GetCheckRuns(ctx.owner, ctx.repo, ctx.base)
 		if err != nil {
 			return err
@@ -83,7 +89,7 @@ func (ctx PublishToDistributions) Check() error {
 			return err
 		}
 
-		if !strings.Contains(string(versions), ctx.version) {
+		if !strings.Contains(string(versions), fmt.Sprintf("%s\n", ctx.version)) {
 			return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("version %s not found in dist.ipfs.tech/kubo/versions", ctx.version)}
 		}
 	} else {
@@ -139,7 +145,12 @@ func (ctx PublishToDistributions) Run() error {
 		return err
 	}
 
-	if !strings.Contains(*versionsFile.Content, ctx.version) {
+	content, err := base64.StdEncoding.DecodeString(*versionsFile.Content)
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(string(content[:]), fmt.Sprintf("%s\n", ctx.version)) {
 		head, err := ctx.github.GetOrCreateBranch(ctx.owner, ctx.repo, ctx.head, ctx.base)
 		if err != nil {
 			return err
@@ -150,9 +161,14 @@ func (ctx PublishToDistributions) Run() error {
 			return err
 		}
 
-		if !strings.Contains(*versionsFile.Content, ctx.version) {
+		content, err := base64.StdEncoding.DecodeString(*versionsFile.Content)
+		if err != nil {
+			return err
+		}
+
+		if !strings.Contains(string(content[:]), fmt.Sprintf("%s\n", ctx.version)) {
 			cmd := git.Command{Name: ctx.distFile, Args: []string{"add-version", "kubo", ctx.version}}
-			err = ctx.git.CloneExecCommitAndPush(ctx.owner, ctx.repo, ctx.head, head.GetCommit().GetSHA(), ctx.glob, fmt.Sprintf("chore: update %s", ctx.versionsFile), cmd)
+			err = ctx.git.WithCloneExecCommitAndPush(ctx.owner, ctx.repo, ctx.head, head.GetCommit().GetSHA(), ctx.glob, fmt.Sprintf("chore: update %s", ctx.versionsFile), cmd)
 			if err != nil {
 				return err
 			}

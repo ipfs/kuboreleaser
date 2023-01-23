@@ -89,13 +89,14 @@ func (c *Client) signature() *object.Signature {
 type Clone struct {
 	client     *Client
 	repository *git.Repository
+	dir        string
 }
 
-func (c *Client) Clone(path, owner, repo, branch, sha string) (*Clone, error) {
-	log.Printf("Cloning [path: %s, owner: %s, repo: %s, branch: %s, sha: %s]\n", path, owner, repo, branch, sha)
+func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
+	log.Printf("Cloning [dir: %s, owner: %s, repo: %s, branch: %s, sha: %s]\n", dir, owner, repo, branch, sha)
 
 	log.Println("Initializing git repository")
-	repository, err := git.PlainInit(path, false)
+	repository, err := git.PlainInit(dir, false)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +142,7 @@ func (c *Client) Clone(path, owner, repo, branch, sha string) (*Clone, error) {
 	return &Clone{
 		client:     c,
 		repository: repository,
+		dir:        dir,
 	}, nil
 }
 
@@ -212,7 +214,15 @@ type Command struct {
 	Args []string
 }
 
-func (c *Client) CloneExecCommitAndPush(owner, repo, branch, sha, glob, message string, commands ...Command) error {
+func (c *Command) Run(dir string) error {
+	cmd := exec.Command(c.Name, c.Args...)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func (c *Client) WithClone(owner, repo, branch, sha string, fn func(*Clone) error) error {
 	dir, err := os.MkdirTemp("", "kuboreleaser")
 	if err != nil {
 		return err
@@ -224,19 +234,33 @@ func (c *Client) CloneExecCommitAndPush(owner, repo, branch, sha, glob, message 
 		return err
 	}
 
-	for _, command := range commands {
-		cmd := exec.Command(command.Name, command.Args...)
-		cmd.Dir = dir
-		err = cmd.Run()
+	return fn(r)
+}
+
+func (c *Client) WithCloneCommitAndPush(owner, repo, branch, sha, glob, message string, fn func(*Clone) error) error {
+	return c.WithClone(owner, repo, branch, sha, func(r *Clone) error {
+		err := fn(r)
 		if err != nil {
 			return err
 		}
-	}
 
-	_, err = r.Commit(glob, message)
-	if err != nil {
-		return err
-	}
+		_, err = r.Commit(glob, message)
+		if err != nil {
+			return err
+		}
 
-	return r.PushBranch(branch)
+		return r.PushBranch(branch)
+	})
+}
+
+func (c *Client) WithCloneExecCommitAndPush(owner, repo, branch, sha, glob, message string, commands ...Command) error {
+	return c.WithCloneCommitAndPush(owner, repo, branch, sha, glob, message, func(r *Clone) error {
+		for _, command := range commands {
+			err := command.Run(r.dir)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

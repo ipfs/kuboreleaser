@@ -19,12 +19,18 @@ type Tag struct {
 }
 
 func NewTag(git *git.Client, github *github.Client, version *util.Version) (*Tag, error) {
+	var branch string
+	if version.Prerelease() == "" {
+		branch = "release"
+	} else {
+		branch = fmt.Sprintf("release-%s", version.MajorMinor())
+	}
 	return &Tag{
 		git:     git,
 		github:  github,
 		owner:   "ipfs",
 		repo:    "kubo",
-		head:    fmt.Sprintf("release-%s", version.MajorMinor()),
+		head:    branch,
 		version: version.Version,
 	}, nil
 }

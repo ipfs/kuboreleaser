@@ -27,14 +27,14 @@ func (v Version) Prerelease() string {
 }
 
 func (v Version) Dev() (string, error) {
-	nv, err := sv.NewVersion(v.Version)
+	newVersion, err := sv.NewVersion(v.Version)
 	if err != nil {
 		return "", err
 	}
-	nv.IncMinor()
-	_, err = nv.SetPrerelease("dev")
+	nextVersion := newVersion.IncMinor()
+	devVersion, err := nextVersion.SetPrerelease("dev")
 	if err != nil {
 		return "", err
 	}
-	return nv.String(), nil
+	return fmt.Sprintf("v%s", devVersion.String()), nil
 }

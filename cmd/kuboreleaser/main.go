@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/ipfs/kuboreleaser/actions"
 	"github.com/ipfs/kuboreleaser/git"
@@ -13,21 +14,31 @@ import (
 )
 
 func Execute(action actions.IAction, c *cli.Context) error {
-
 	if !c.Bool("skip-check-before") {
-		if err := action.Check(); err != nil {
+		err := action.Check()
+		switch err := err.(type) {
+		case *util.CheckError:
+			if err.Action != util.CheckErrorRetry {
+				return err
+			} else {
+				log.Println(err)
+			}
+		default:
 			return err
 		}
 	}
 
 	if !c.Bool("skip-run") {
-		if err := action.Run(); err != nil {
+		err := action.Run()
+		if err != nil {
 			return err
 		}
 	}
 
 	if !c.Bool("skip-check-after") {
-		if err := action.Check(); err != nil {
+		time.Sleep(time.Duration(10) * time.Second)
+		err := action.Check()
+		if err != nil {
 			return err
 		}
 	}
@@ -114,10 +125,11 @@ func main() {
 						Name:  "notify-bifrost",
 						Usage: "Notify Bifrost of the new release",
 						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name: "date",
+							&cli.TimestampFlag{
+								Name:    "date",
 								Aliases: []string{"d"},
-								Usage: "Date of the release",
+								Usage:   "Date of the release",
+								Layout:  "2006-01-02",
 							},
 						},
 						Action: func(c *cli.Context) error {
@@ -234,6 +246,76 @@ func main() {
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action, err := actions.NewUpdateIPFSDesktop(git, github, version)
+							if err != nil {
+								return err
+							}
+
+							return Execute(action, c)
+						},
+					},
+					{
+						Name:  "update-interop",
+						Usage: "Update the release in interop",
+						Action: func(c *cli.Context) error {
+							git := c.App.Metadata["git"].(*git.Client)
+							github := c.App.Metadata["github"].(*github.Client)
+							version := c.App.Metadata["version"].(*util.Version)
+
+							action, err := actions.NewUpdateInterop(git, github, version)
+							if err != nil {
+								return err
+							}
+
+							return Execute(action, c)
+						},
+					},
+					{
+						Name:  "update-ipfs-docs",
+						Usage: "Update the release in ipfs-docs",
+						Action: func(c *cli.Context) error {
+							github := c.App.Metadata["github"].(*github.Client)
+							version := c.App.Metadata["version"].(*util.Version)
+
+							action, err := actions.NewUpdateIPFSDocs(github, version)
+							if err != nil {
+								return err
+							}
+
+							return Execute(action, c)
+						},
+					},
+					{
+						Name:  "update-ipfs-blog",
+						Usage: "Update the release in ipfs-blog",
+						Flags: []cli.Flag{
+							&cli.TimestampFlag{
+								Name:    "date",
+								Aliases: []string{"d"},
+								Usage:   "Date of the release",
+								Layout:  "2006-01-02",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							git := c.App.Metadata["git"].(*git.Client)
+							github := c.App.Metadata["github"].(*github.Client)
+							version := c.App.Metadata["version"].(*util.Version)
+
+							action, err := actions.NewUpdateIPFSBlog(git, github, version, c.Timestamp("date"))
+							if err != nil {
+								return err
+							}
+
+							return Execute(action, c)
+						},
+					},
+					{
+						Name:  "merge-branch",
+						Usage: "Merge the release branch into master",
+						Action: func(c *cli.Context) error {
+							github := c.App.Metadata["github"].(*github.Client)
+							version := c.App.Metadata["version"].(*util.Version)
+
+							action, err := actions.NewMergeBranch(github, version)
 							if err != nil {
 								return err
 							}

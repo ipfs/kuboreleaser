@@ -15,3 +15,10 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 - [ ] run exec commands with streaming output
 - [ ] handle the case where PR was closed without being merged
 - [ ] add a `--dry-run` flag
+- [ ] add wait for CI checks to appear (e.g. in cut-branch it seems that automation is too fast)
+- [ ] change PR to ready for review on final release (e.g. in cut-branch)
+- [ ] automate changelog creation (last step of previous release)
+- [ ] automate changelog update (mkreleaselog; might require git in docker)
+- [ ] wait after tag push (seems that github is not as fast as git)
+- [ ] add check for docker image publishing (somewhere?)
+- [ ] account for checks that are skipped (e.g diff in publish-to-distributions@master)

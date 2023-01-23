@@ -8,7 +8,7 @@ import (
 	"github.com/ipfs/kuboreleaser/util"
 )
 
-type PublishToNPM struct {
+type UpdateIPFSDocs struct {
 	github   *github.Client
 	owner    string
 	repo     string
@@ -17,18 +17,18 @@ type PublishToNPM struct {
 	version  string
 }
 
-func NewPublishToNPM(github *github.Client, version *util.Version) (*PublishToNPM, error) {
-	return &PublishToNPM{
+func NewUpdateIPFSDocs(github *github.Client, version *util.Version) (*UpdateIPFSDocs, error) {
+	return &UpdateIPFSDocs{
 		github:   github,
 		owner:    "ipfs",
-		repo:     "npm-go-ipfs",
-		base:     "master",
-		workflow: "main.yml",
-		version:  version.Version[1:],
+		repo:     "ipfs-docs",
+		base:     "main",
+		workflow: "update-on-new-ipfs-tag.yml",
+		version:  version.Version,
 	}, nil
 }
 
-func (ctx PublishToNPM) Check() error {
+func (ctx UpdateIPFSDocs) Check() error {
 	run, err := ctx.github.GetWorkflowRun(ctx.owner, ctx.repo, ctx.workflow, false)
 	if err != nil {
 		return err
@@ -47,12 +47,12 @@ func (ctx PublishToNPM) Check() error {
 		return err
 	}
 
-	publish := logs.JobLogs["publish"]
-	if publish == nil {
-		return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("the latest run does not have a publish job")}
+	update := logs.JobLogs["update"]
+	if update == nil {
+		return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("the latest run does not have an update job")}
 	}
 
-	if !strings.Contains(publish.RawLogs, fmt.Sprintf(" %s\r\n", ctx.version)) {
+	if !strings.Contains(update.RawLogs, fmt.Sprintf(" %s\r\n", ctx.version)) {
 		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("the latest run does not have the version %s", ctx.version)}
 	}
 
@@ -63,6 +63,6 @@ func (ctx PublishToNPM) Check() error {
 	return nil
 }
 
-func (ctx PublishToNPM) Run() error {
+func (ctx UpdateIPFSDocs) Run() error {
 	return ctx.github.CreateWorkflowRun(ctx.owner, ctx.repo, ctx.workflow, ctx.base)
 }

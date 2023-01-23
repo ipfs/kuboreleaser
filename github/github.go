@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -136,7 +136,7 @@ func (c *Client) GetBranch(owner, repo, name string) (*github.Branch, error) {
 	log.Printf("Getting branch [owner: %s, repo: %s, name: %s]\n", owner, repo, name)
 
 	branch, _, err := c.github.Repositories.GetBranch(context.Background(), owner, repo, name, false)
-	if err != nil && strings.Contains(err.Error(), "404 Not Found") {
+	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
 	return branch, err
@@ -228,7 +228,7 @@ func (c *Client) GetFile(owner, repo, path, ref string) (*github.RepositoryConte
 	f, _, _, err := c.github.Repositories.GetContents(context.Background(), owner, repo, path, &github.RepositoryContentGetOptions{
 		Ref: ref,
 	})
-	if err != nil && strings.Contains(err.Error(), "404 Not Found") {
+	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
 	return f, err
@@ -389,7 +389,7 @@ func (c *Client) GetRelease(owner, repo, tag string) (*github.RepositoryRelease,
 	log.Printf("Getting release [owner: %s, repo: %s, tag: %s]\n", owner, repo, tag)
 
 	r, _, err := c.github.Repositories.GetReleaseByTag(context.Background(), owner, repo, tag)
-	if err != nil && strings.Contains(err.Error(), "404 Not Found") {
+	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
 	return r, err
@@ -424,7 +424,7 @@ func (c *Client) GetTag(owner, repo, tag string) (*github.Tag, error) {
 	log.Printf("Getting tag [owner: %s, repo: %s, tag: %s]\n", owner, repo, tag)
 
 	t, _, err := c.github.Git.GetTag(context.Background(), owner, repo, tag)
-	if err != nil && strings.Contains(err.Error(), "404 Not Found") {
+	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
 	return t, err

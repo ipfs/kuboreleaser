@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -12,9 +13,10 @@ type PublishToGitHub struct {
 	github     *github.Client
 	owner      string
 	repo       string
+	head       string
 	base       string
 	name       string
-	body       string
+	majorMinor string
 	prerelease bool
 	workflow   string
 	version    string
@@ -25,11 +27,12 @@ func NewPublishToGitHub(github *github.Client, version *util.Version) (*PublishT
 		github:     github,
 		owner:      "ipfs",
 		repo:       "kubo",
+		head:       "release",
 		base:       "master",
 		workflow:   "sync-release-assets.yml",
 		version:    version.Version,
 		name:       version.Version,
-		body:       fmt.Sprintf("Changelog: [docs/changelogs/%s.md](https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md)", version.MajorMinor(), version.MajorMinor(), version.MajorMinor()),
+		majorMinor: version.MajorMinor(),
 		prerelease: version.Prerelease() != "",
 	}, nil
 }
@@ -88,7 +91,29 @@ func (ctx PublishToGitHub) Check() error {
 }
 
 func (ctx PublishToGitHub) Run() error {
-	_, err := ctx.github.GetOrCreateRelease(ctx.owner, ctx.repo, ctx.version, ctx.name, ctx.body, ctx.prerelease)
+	var body string
+	if ctx.prerelease {
+		body = fmt.Sprintf("Changelog: [docs/changelogs/%s.md](https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md)", ctx.majorMinor, ctx.majorMinor, ctx.majorMinor)
+	} else {
+		file, err := ctx.github.GetFile(ctx.owner, ctx.repo, fmt.Sprintf("docs/changelogs/%s.md", ctx.majorMinor), ctx.head)
+		if err != nil {
+			return err
+		}
+
+		content, err := base64.StdEncoding.DecodeString(*file.Content)
+		if err != nil {
+			return err
+		}
+
+		body = string(content)
+		index := strings.Index(body, "- [Overview](#overview)\n")
+		if index != -1 {
+			index += len("- [Overview](#overview)\n")
+			body = body[index:]
+		}
+	}
+
+	_, err := ctx.github.GetOrCreateRelease(ctx.owner, ctx.repo, ctx.version, ctx.name, body, ctx.prerelease)
 	if err != nil {
 		return err
 	}

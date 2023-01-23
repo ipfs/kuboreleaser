@@ -10,7 +10,7 @@ import (
 	"github.com/ipfs/kuboreleaser/util"
 )
 
-type UpdateIPFSDesktop struct {
+type UpdateInterop struct {
 	git         *git.Client
 	github      *github.Client
 	owner       string
@@ -25,13 +25,13 @@ type UpdateIPFSDesktop struct {
 	draft       bool
 }
 
-func NewUpdateIPFSDesktop(git *git.Client, github *github.Client, version *util.Version) (*UpdateIPFSDesktop, error) {
-	return &UpdateIPFSDesktop{
+func NewUpdateInterop(git *git.Client, github *github.Client, version *util.Version) (*UpdateInterop, error) {
+	return &UpdateInterop{
 		git:         git,
 		github:      github,
 		owner:       "ipfs",
-		repo:        "ipfs-desktop",
-		base:        "main",
+		repo:        "interop",
+		base:        "master",
 		head:        fmt.Sprintf("update-kubo-%s", version.MajorMinor()),
 		title:       fmt.Sprintf("Update Kubo: %s", version.MajorMinor()),
 		body:        fmt.Sprintf("This PR updates Kubo to %s", version.MajorMinor()),
@@ -42,7 +42,7 @@ func NewUpdateIPFSDesktop(git *git.Client, github *github.Client, version *util.
 	}, nil
 }
 
-func (ctx UpdateIPFSDesktop) Check() error {
+func (ctx UpdateInterop) Check() error {
 	file, err := ctx.github.GetFile(ctx.owner, ctx.repo, ctx.versionFile, ctx.base)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (ctx UpdateIPFSDesktop) Check() error {
 	return nil
 }
 
-func (ctx UpdateIPFSDesktop) Run() error {
+func (ctx UpdateInterop) Run() error {
 	head, err := ctx.github.GetOrCreateBranch(ctx.owner, ctx.repo, ctx.head, ctx.base)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func (ctx UpdateIPFSDesktop) Run() error {
 	}
 
 	if !strings.Contains(string(content[:]), fmt.Sprintf("\"^%s\"", ctx.version[1:])) {
-		cmd := git.Command{Name: "npm", Args: []string{"install", fmt.Sprintf("go-ipfs@%s", ctx.version), "--save"}}
+		cmd := git.Command{Name: "npm", Args: []string{"install", fmt.Sprintf("go-ipfs@%s", ctx.version), "--save-dev"}}
 		err = ctx.git.WithCloneExecCommitAndPush(ctx.owner, ctx.repo, ctx.head, head.GetCommit().GetSHA(), ctx.glob, fmt.Sprintf("chore: update %s", ctx.versionFile), cmd)
 		if err != nil {
 			return err
