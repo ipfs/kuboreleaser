@@ -255,6 +255,40 @@ func (c *Client) GetCheckRuns(owner, repo, ref string) ([]*github.CheckRun, erro
 	return runs, nil
 }
 
+func (c *Client) GetIncompleteCheckRuns(owner, repo, ref string) ([]*github.CheckRun, error) {
+	log.Printf("Getting incomplete checks [owner: %s, repo: %s, ref: %s]\n", owner, repo, ref)
+
+	runs, err := c.GetCheckRuns(owner, repo, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	var incomplete []*github.CheckRun
+	for _, r := range runs {
+		if r.GetStatus() != "completed" {
+			incomplete = append(incomplete, r)
+		}
+	}
+	return incomplete, nil
+}
+
+func (c *Client) GetUnsuccessfulCheckRuns(owner, repo, ref string) ([]*github.CheckRun, error) {
+	log.Printf("Getting unsuccessful checks [owner: %s, repo: %s, ref: %s]\n", owner, repo, ref)
+
+	runs, err := c.GetCheckRuns(owner, repo, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	var unsuccessful []*github.CheckRun
+	for _, r := range runs {
+		if r.GetStatus() == "completed" && r.GetConclusion() != "success" && r.GetConclusion() != "skipped" {
+			unsuccessful = append(unsuccessful, r)
+		}
+	}
+	return unsuccessful, nil
+}
+
 type WorkflowRunInput struct {
 	Name  string
 	Value interface{}

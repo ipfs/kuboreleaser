@@ -113,9 +113,10 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewCutBranch(git, github, version)
-							if err != nil {
-								return err
+							action := &actions.CutBranch{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -136,9 +137,10 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewNotifyBifrost(github, version, c.Timestamp("date"))
-							if err != nil {
-								return err
+							action := &actions.NotifyBifrost{
+								GitHub:  github,
+								Version: version,
+								Date:    c.Timestamp("date"),
 							}
 
 							return Execute(action, c)
@@ -152,9 +154,10 @@ func main() {
 							matrix := c.App.Metadata["matrix"].(*matrix.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewPromote(github, matrix, version)
-							if err != nil {
-								return err
+							action := &actions.Promote{
+								GitHub:  github,
+								Matrix:  matrix,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -168,9 +171,10 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewPublishToDistributions(git, github, version)
-							if err != nil {
-								return err
+							action := &actions.PublishToDistributions{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -183,9 +187,9 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewPublishToGitHub(github, version)
-							if err != nil {
-								return err
+							action := &actions.PublishToGitHub{
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -198,9 +202,9 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewPublishToNPM(github, version)
-							if err != nil {
-								return err
+							action := &actions.PublishToNPM{
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -214,9 +218,10 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewTag(git, github, version)
-							if err != nil {
-								return err
+							action := &actions.Tag{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -229,9 +234,9 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewTestIPFSCompanion(github, version)
-							if err != nil {
-								return err
+							action := &actions.TestIPFSCompanion{
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -245,9 +250,10 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewUpdateIPFSDesktop(git, github, version)
-							if err != nil {
-								return err
+							action := &actions.UpdateIPFSDesktop{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -261,9 +267,10 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewUpdateInterop(git, github, version)
-							if err != nil {
-								return err
+							action := &actions.UpdateInterop{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -276,9 +283,9 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewUpdateIPFSDocs(github, version)
-							if err != nil {
-								return err
+							action := &actions.UpdateIPFSDocs{
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)
@@ -300,9 +307,11 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewUpdateIPFSBlog(git, github, version, c.Timestamp("date"))
-							if err != nil {
-								return err
+							action := &actions.UpdateIPFSBlog{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
+								Date:    c.Timestamp("date"),
 							}
 
 							return Execute(action, c)
@@ -315,9 +324,9 @@ func main() {
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action, err := actions.NewMergeBranch(github, version)
-							if err != nil {
-								return err
+							action := &actions.MergeBranch{
+								GitHub:  github,
+								Version: version,
 							}
 
 							return Execute(action, c)

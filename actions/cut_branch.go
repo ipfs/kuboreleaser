@@ -1,170 +1,73 @@
 package actions
 
 import (
-	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"github.com/ipfs/kuboreleaser/git"
 	"github.com/ipfs/kuboreleaser/github"
+	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
 )
 
 type CutBranch struct {
-	git            *git.Client
-	github         *github.Client
-	owner          string
-	repo           string
-	defaultBase    string
-	defaultHead    string
-	defaultTitle   string
-	defaultBody    string
-	releaseBase    string
-	releaseHead    string
-	releaseTitle   string
-	releaseBody    string
-	defaultVersion string
-	releaseVersion string
-	versionFile    string
-	prerelease     bool
-}
-
-func NewCutBranch(git *git.Client, github *github.Client, version *util.Version) (*CutBranch, error) {
-	devVersion, err := version.Dev()
-	if err != nil {
-		return nil, err
-	}
-
-	return &CutBranch{
-		git:            git,
-		github:         github,
-		owner:          "ipfs",
-		repo:           "kubo",
-		defaultBase:    "master",
-		releaseBase:    "release",
-		defaultHead:    fmt.Sprintf("dev-version-update-%s", version.MajorMinor()),
-		releaseHead:    fmt.Sprintf("release-%s", version.MajorMinor()),
-		defaultTitle:   fmt.Sprintf("Dev Version Update: %s", version.MajorMinor()),
-		releaseTitle:   fmt.Sprintf("Release: %s", version.MajorMinor()),
-		defaultBody:    fmt.Sprintf("This PR updates version to %s", version.MajorMinor()),
-		releaseBody:    fmt.Sprintf("This PR creates release %s", version.MajorMinor()),
-		defaultVersion: devVersion[1:],      // check for v prefix
-		releaseVersion: version.Version[1:], // check for v prefix
-		versionFile:    "version.go",
-		prerelease:     version.Prerelease() != "",
-	}, nil
+	Git     *git.Client
+	GitHub  *github.Client
+	Version *util.Version
 }
 
 func (ctx CutBranch) Check() error {
-	file, err := ctx.github.GetFile(ctx.owner, ctx.repo, ctx.versionFile, ctx.releaseHead)
+	versionReleaseBranch := repos.Kubo.VersionReleaseBranch(ctx.Version)
+	versionUpdateBranch := repos.Kubo.VersionUpdateBranch(ctx.Version)
+
+	err := CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionUpdateBranch, true)
 	if err != nil {
 		return err
 	}
 
-	content, err := base64.StdEncoding.DecodeString(*file.Content)
-	if err != nil {
-		return err
-	}
-
-	if !strings.Contains(string(content[:]), fmt.Sprintf("\"%s\"", ctx.releaseVersion)) {
-		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("version file does not contain release version")}
-	}
-
-	pr, err := ctx.github.GetPR(ctx.owner, ctx.repo, ctx.releaseHead)
-	if err != nil {
-		return err
-	}
-
-	if pr == nil {
-		return &util.CheckError{
-			Action: util.CheckErrorRetry,
-			Err:    fmt.Errorf("PR not found"),
-		}
-	}
-
-	runs, err := ctx.github.GetCheckRuns(ctx.owner, ctx.repo, ctx.releaseHead)
-	if err != nil {
-		return err
-	}
-
-	for _, run := range runs {
-		if run.GetStatus() == "completed" && run.GetConclusion() != "success" {
-			return &util.CheckError{
-				Action: util.CheckErrorFail,
-				Err:    fmt.Errorf("check %s is not successful", run.GetName()),
-			}
-		}
-	}
-
-	for _, run := range runs {
-		if run.GetStatus() != "completed" {
-			return &util.CheckError{
-				Action: util.CheckErrorWait,
-				Err:    fmt.Errorf("check %s has not completed yet", run.GetName()),
-			}
-		}
-	}
-
-	if !ctx.prerelease && !pr.GetMerged() {
-		return &util.CheckError{
-			Action: util.CheckErrorWait,
-			Err:    fmt.Errorf("PR is not merged yet"),
-		}
-	}
-
-	return nil
+	return CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionReleaseBranch, !ctx.Version.IsPrerelease())
 }
 
-func (ctx CutBranch) UpdateVersionFile(head, sha, base, version, title, body string, draft bool) error {
-	versionFile, err := ctx.github.GetFile(ctx.owner, ctx.repo, ctx.versionFile, head)
+func (ctx CutBranch) UpdateVersion(branch, source, currentVersionNumber, base, title, body string, draft bool) error {
+	b, err := ctx.GitHub.GetOrCreateBranch(repos.Kubo.Owner, repos.Kubo.Repo, branch, source)
 	if err != nil {
 		return err
 	}
 
-	content, err := base64.StdEncoding.DecodeString(*versionFile.Content)
+	err = ctx.Git.RunAndPush(repos.Kubo.Owner, repos.Kubo.Repo, branch, b.GetCommit().GetSHA(), "chore: update version", git.Command{Name: "sed", Args: []string{"-i", fmt.Sprintf("s/const CurrentVersionNumber = \".*\"/const CurrentVersionNumber = \"%s\"/g", currentVersionNumber), "version.go"}})
 	if err != nil {
 		return err
 	}
 
-	if !strings.Contains(string(content[:]), fmt.Sprintf("\"%s\"", version)) {
-		cmd := git.Command{Name: "sed", Args: []string{"-i", fmt.Sprintf("s/const CurrentVersionNumber = \".*\"/const CurrentVersionNumber = \"%s\"/g", version), ctx.versionFile}}
-		err = ctx.git.WithCloneExecCommitAndPush(ctx.owner, ctx.repo, head, sha, ctx.versionFile, fmt.Sprintf("chore: update %s", ctx.versionFile), cmd)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = ctx.github.GetOrCreatePR(ctx.owner, ctx.repo, head, base, title, body, draft)
+	_, err = ctx.GitHub.GetOrCreatePR(repos.Kubo.Owner, repos.Kubo.Repo, branch, base, title, body, draft)
 	return err
 }
 
 func (ctx CutBranch) Run() error {
-	releaseHead, err := ctx.github.GetOrCreateBranch(ctx.owner, ctx.repo, ctx.releaseHead, ctx.defaultBase)
+	dev, err := ctx.Version.Dev()
 	if err != nil {
 		return err
 	}
 
-	defaultVersionFile, err := ctx.github.GetFile(ctx.owner, ctx.repo, ctx.versionFile, ctx.defaultBase)
+	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
+	source := repos.Kubo.DefaultBranch
+	currentVersionNumber := ctx.Version.String()[1:]
+	base := repos.Kubo.ReleaseBranch
+	title := fmt.Sprintf("Release: %s", ctx.Version.MajorMinorPatch())
+	body := fmt.Sprintf("This PR creates release %s", ctx.Version.MajorMinorPatch())
+	draft := ctx.Version.IsPrerelease()
+
+	err = ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
 	if err != nil {
 		return err
 	}
 
-	content, err := base64.StdEncoding.DecodeString(*defaultVersionFile.Content)
-	if err != nil {
-		return err
-	}
+	branch = repos.Kubo.VersionUpdateBranch(ctx.Version)
+	source = repos.Kubo.DefaultBranch
+	currentVersionNumber = dev[1:]
+	base = repos.Kubo.DefaultBranch
+	title = fmt.Sprintf("Update Version: %s", ctx.Version.MajorMinor())
+	body = fmt.Sprintf("This PR updates version as part of the %s release", ctx.Version.MajorMinor())
+	draft = false
 
-	if !strings.Contains(string(content[:]), fmt.Sprintf("\"%s\"", ctx.defaultVersion)) {
-		defaultHead, err := ctx.github.GetOrCreateBranch(ctx.owner, ctx.repo, ctx.defaultHead, ctx.defaultBase)
-		if err != nil {
-			return err
-		}
-
-		err = ctx.UpdateVersionFile(ctx.defaultHead, defaultHead.GetCommit().GetSHA(), ctx.defaultBase, ctx.defaultVersion, ctx.defaultTitle, ctx.defaultBody, false)
-		if err != nil {
-			return err
-		}
-	}
-
-	return ctx.UpdateVersionFile(ctx.releaseHead, releaseHead.GetCommit().GetSHA(), ctx.releaseBase, ctx.releaseVersion, ctx.releaseTitle, ctx.releaseBody, ctx.prerelease)
+	return ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
 }

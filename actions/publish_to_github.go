@@ -6,96 +6,33 @@ import (
 	"strings"
 
 	"github.com/ipfs/kuboreleaser/github"
+	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
 )
 
 type PublishToGitHub struct {
-	github     *github.Client
-	owner      string
-	repo       string
-	head       string
-	base       string
-	name       string
-	majorMinor string
-	prerelease bool
-	workflow   string
-	version    string
-}
-
-func NewPublishToGitHub(github *github.Client, version *util.Version) (*PublishToGitHub, error) {
-	return &PublishToGitHub{
-		github:     github,
-		owner:      "ipfs",
-		repo:       "kubo",
-		head:       "release",
-		base:       "master",
-		workflow:   "sync-release-assets.yml",
-		version:    version.Version,
-		name:       version.Version,
-		majorMinor: version.MajorMinor(),
-		prerelease: version.Prerelease() != "",
-	}, nil
+	GitHub  *github.Client
+	Version *util.Version
 }
 
 func (ctx PublishToGitHub) Check() error {
-	release, err := ctx.github.GetRelease(ctx.owner, ctx.repo, ctx.version)
+	release, err := ctx.GitHub.GetRelease(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String())
 	if err != nil {
 		return err
 	}
-
 	if release == nil {
-		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("release %s not found", ctx.version)}
+		return fmt.Errorf("release not found (%w)", ErrFailure)
 	}
 
-	run, err := ctx.github.GetWorkflowRun(ctx.owner, ctx.repo, ctx.workflow, false)
-	if err != nil {
-		return err
-	}
-
-	if run == nil {
-		return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("no workflow runs found")}
-	}
-
-	if run.GetStatus() != "completed" {
-		return &util.CheckError{Action: util.CheckErrorWait, Err: fmt.Errorf("the latest run is not completed")}
-	}
-
-	logs, err := ctx.github.GetWorkflowRunLogs(ctx.owner, ctx.repo, run.GetID())
-	if err != nil {
-		return err
-	}
-
-	sync := logs.JobLogs["sync-github-and-dist-ipfs-tech"]
-	if sync == nil {
-		return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("the latest run does not have a sync-github-and-dist-ipfs-tech job")}
-	}
-
-	if !strings.Contains(sync.RawLogs, ctx.version) {
-		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("the latest run does not have the version %s", ctx.version)}
-	}
-
-	if run.GetConclusion() != "success" {
-		return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("the latest run did not succeed")}
-	}
-
-	release, err = ctx.github.GetRelease(ctx.owner, ctx.repo, ctx.version)
-	if err != nil {
-		return err
-	}
-
-	if release.Assets == nil || len(release.Assets) == 0 {
-		return &util.CheckError{Action: util.CheckErrorFail, Err: fmt.Errorf("the release does not have any assets")}
-	}
-
-	return nil
+	return CheckWorkflowRun(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.SyncReleaseAssetsWorkflowJobName, ctx.Version.String())
 }
 
 func (ctx PublishToGitHub) Run() error {
 	var body string
-	if ctx.prerelease {
-		body = fmt.Sprintf("Changelog: [docs/changelogs/%s.md](https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md)", ctx.majorMinor, ctx.majorMinor, ctx.majorMinor)
+	if ctx.Version.IsPrerelease() {
+		body = fmt.Sprintf("Changelog: [docs/changelogs/%s.md](https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md)", ctx.Version.MajorMinor(), ctx.Version.MajorMinor(), ctx.Version.MajorMinor())
 	} else {
-		file, err := ctx.github.GetFile(ctx.owner, ctx.repo, fmt.Sprintf("docs/changelogs/%s.md", ctx.majorMinor), ctx.head)
+		file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, fmt.Sprintf("docs/changelogs/%s.md", ctx.Version.MajorMinor()), repos.Kubo.ReleaseBranch)
 		if err != nil {
 			return err
 		}
@@ -113,10 +50,10 @@ func (ctx PublishToGitHub) Run() error {
 		}
 	}
 
-	_, err := ctx.github.GetOrCreateRelease(ctx.owner, ctx.repo, ctx.version, ctx.name, body, ctx.prerelease)
+	_, err := ctx.GitHub.GetOrCreateRelease(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ctx.Version.String(), body, ctx.Version.IsPrerelease())
 	if err != nil {
 		return err
 	}
 
-	return ctx.github.CreateWorkflowRun(ctx.owner, ctx.repo, ctx.workflow, ctx.base)
+	return ctx.GitHub.CreateWorkflowRun(repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.DefaultBranch)
 }

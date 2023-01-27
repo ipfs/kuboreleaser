@@ -22,3 +22,5 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 - [ ] wait after tag push (seems that github is not as fast as git)
 - [ ] add check for docker image publishing (somewhere?)
 - [ ] account for checks that are skipped (e.g diff in publish-to-distributions@master)
+- [ ] handle patch releases in cut branch
+- [ ] tell user to merge PRs, e.g. in publish to dists

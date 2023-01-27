@@ -2,91 +2,58 @@ package actions
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/ipfs/kuboreleaser/git"
 	"github.com/ipfs/kuboreleaser/github"
+	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
 )
 
 type Tag struct {
-	git     *git.Client
-	github  *github.Client
-	owner   string
-	repo    string
-	head    string
-	version string
+	Git     *git.Client
+	GitHub  *github.Client
+	Version *util.Version
 }
 
-func NewTag(git *git.Client, github *github.Client, version *util.Version) (*Tag, error) {
-	var branch string
-	if version.Prerelease() == "" {
-		branch = "release"
+func (ctx Tag) getBranch() string {
+	if ctx.Version.IsPrerelease() {
+		return repos.Kubo.VersionReleaseBranch(ctx.Version)
 	} else {
-		branch = fmt.Sprintf("release-%s", version.MajorMinor())
+		return repos.Kubo.ReleaseBranch
 	}
-	return &Tag{
-		git:     git,
-		github:  github,
-		owner:   "ipfs",
-		repo:    "kubo",
-		head:    branch,
-		version: version.Version,
-	}, nil
 }
 
 func (ctx Tag) Check() error {
-	tag, err := ctx.github.GetTag(ctx.owner, ctx.repo, ctx.version)
+	tag, err := ctx.GitHub.GetTag(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String())
 	if err != nil {
 		return err
 	}
-
 	if tag == nil {
-		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("tag %s does not exist", ctx.version)}
+		return fmt.Errorf("tag %s does not exist (%w)", ctx.Version.String(), ErrFailure)
 	}
-
 	return nil
 }
 
 func (ctx Tag) Run() error {
-	tag, err := ctx.github.GetTag(ctx.owner, ctx.repo, ctx.version)
+	branch, err := ctx.GitHub.GetBranch(repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
 	if err != nil {
 		return err
 	}
-	if tag != nil {
-		return nil
-	}
-
-	branch, err := ctx.github.GetBranch(ctx.owner, ctx.repo, ctx.head)
-	if err != nil {
-		return err
-	}
-
 	if branch == nil {
-		return fmt.Errorf("branch %s does not exist", ctx.head)
+		return fmt.Errorf("branch %s does not exist", ctx.getBranch())
 	}
-
-	dir, err := os.MkdirTemp("", "dist")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir)
 
 	sha := branch.GetCommit().GetSHA()
 
-	repo, err := ctx.git.Clone(dir, ctx.owner, ctx.repo, ctx.head, sha)
-	if err != nil {
-		return err
-	}
+	return ctx.Git.WithClone(repos.Kubo.Owner, repos.Kubo.Repo, branch.GetName(), sha, func(c *git.Clone) error {
+		ref, err := c.Tag(sha, ctx.Version.String(), fmt.Sprintf("Release %s", ctx.Version))
+		if err != nil {
+			return err
+		}
 
-	ref, err := repo.Tag(sha, ctx.version, fmt.Sprintf("Release %s", ctx.version))
-	if err != nil {
-		return err
-	}
+		var confirmation string
 
-	var confirmation string
-
-	fmt.Printf(`
+		fmt.Printf(`
 Tag created:
 %v
 
@@ -96,16 +63,11 @@ The tag will now be pushed to the remote repository.
 Only 'yes' will be accepted to approve.
 
 Enter a value: `, ref, ref.PGPSignature)
-	fmt.Scanln(&confirmation)
+		fmt.Scanln(&confirmation)
+		if confirmation != "yes" {
+			return fmt.Errorf("confirmation is not 'yes'")
+		}
 
-	if confirmation != "yes" {
-		return fmt.Errorf("confirmation is not 'yes'")
-	}
-
-	err = repo.PushTag(ctx.version)
-	if err != nil {
-		return err
-	}
-
-	return nil
+		return c.PushTag(ctx.Version.String())
+	})
 }

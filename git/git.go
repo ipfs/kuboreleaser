@@ -146,6 +146,15 @@ func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
 	}, nil
 }
 
+func (c *Clone) Status() (git.Status, error) {
+	log.Println("Getting status")
+	worktree, err := c.repository.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	return worktree.Status()
+}
+
 func (c *Clone) Commit(glob, message string) (*object.Commit, error) {
 	log.Printf("Committing [glob: %s, message: %s]\n", glob, message)
 
@@ -237,30 +246,29 @@ func (c *Client) WithClone(owner, repo, branch, sha string, fn func(*Clone) erro
 	return fn(r)
 }
 
-func (c *Client) WithCloneCommitAndPush(owner, repo, branch, sha, glob, message string, fn func(*Clone) error) error {
+func (c *Client) RunAndPush(owner, repo, branch, sha, message string, commands ...Command) error {
 	return c.WithClone(owner, repo, branch, sha, func(r *Clone) error {
-		err := fn(r)
-		if err != nil {
-			return err
-		}
-
-		_, err = r.Commit(glob, message)
-		if err != nil {
-			return err
-		}
-
-		return r.PushBranch(branch)
-	})
-}
-
-func (c *Client) WithCloneExecCommitAndPush(owner, repo, branch, sha, glob, message string, commands ...Command) error {
-	return c.WithCloneCommitAndPush(owner, repo, branch, sha, glob, message, func(r *Clone) error {
 		for _, command := range commands {
 			err := command.Run(r.dir)
 			if err != nil {
 				return err
 			}
 		}
+
+		status, err := r.Status()
+		if err != nil {
+			return err
+		}
+
+		if !status.IsClean() {
+			_, err = r.Commit("*", message)
+			if err != nil {
+				return err
+			}
+
+			return r.PushBranch(branch)
+		}
+
 		return nil
 	})
 }

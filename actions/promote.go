@@ -7,34 +7,33 @@ import (
 
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/matrix"
+	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
 )
 
 type Promote struct {
-	github          *github.Client
-	matrix          *matrix.Client
-	owner           string
-	repo            string
-	issueTitle      string
-	issueComment    string
-	postTitle       string
-	postCategory    string
-	postTags        []string
-	postBody        string
-	matrixRoomAlias string
-	matrixBotAlias  string
-	prerelease      bool
-	version         string
-	majorMinor      string
-	url             string
+	GitHub  *github.Client
+	Matrix  *matrix.Client
+	Version *util.Version
 }
 
-func NewPromote(github *github.Client, matrix *matrix.Client, version *util.Version) (*Promote, error) {
-	prerelease := version.Prerelease() != ""
+func (ctx *Promote) getDiscoursePostTitle() string {
+	return fmt.Sprintf("Kubo %s is out!", ctx.Version)
+}
 
-	var issueComment string
-	if prerelease {
-		issueComment = fmt.Sprintf(`Early testers ping for %s testing 😄.
+func (ctx *Promote) getDiscoursePostBody() string {
+	return fmt.Sprintf(`## Kubo %s is out!
+
+See:
+- Code: https://github.com/ipfs/kubo/releases/tag/%s
+- Binaries: https://dist.ipfs.tech/kubo/%s/
+- Docker: `+"`docker pull ipfs/kubo:%s`"+`
+- Release Notes (WIP): https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md`, ctx.Version, ctx.Version, ctx.Version, ctx.Version, ctx.Version.MajorMinor(), ctx.Version.MajorMinor())
+}
+
+func (ctx *Promote) getReleaseIssueComment() string {
+	if ctx.Version.IsPrerelease() {
+		return fmt.Sprintf(`Early testers ping for %s testing 😄.
 
 	- [ ] pacman.store (@RubenKelevra)
 	- [ ] Infura (@MichaelMure)
@@ -47,62 +46,30 @@ func NewPromote(github *github.Client, matrix *matrix.Client, version *util.Vers
 	- [ ] Fission (@bmann)
 	- [ ] OrbitDB (@aphelionz)
 
-	You're getting this message because you're listed [here](https://github.com/ipfs/kubo/blob/master/docs/EARLY_TESTERS.md#who-has-signed-up). Please update this list if you no longer want to be included.`, version.Version)
+	You're getting this message because you're listed [here](https://github.com/ipfs/kubo/blob/master/docs/EARLY_TESTERS.md#who-has-signed-up). Please update this list if you no longer want to be included.`, ctx.Version)
 	} else {
-		issueComment = fmt.Sprintf("🎉 Kubo [%s](https://github.com/ipfs/kubo/releases/tag/%s) is out!", version.Version, version.Version)
+		return fmt.Sprintf("🎉 Kubo [%s](https://github.com/ipfs/kubo/releases/tag/%s) is out!", ctx.Version, ctx.Version)
 	}
-
-	postBody := fmt.Sprintf(`## Kubo %s is out!
-
-See:
-- Code: https://github.com/ipfs/kubo/releases/tag/%s
-- Binaries: https://dist.ipfs.tech/kubo/%s/
-- Docker: `+"`docker pull ipfs/kubo:%s`"+`
-- Release Notes (WIP): https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md`, version.Version, version.Version, version.Version, version.Version, version.MajorMinor(), version.MajorMinor())
-
-	return &Promote{
-		github:          github,
-		matrix:          matrix,
-		owner:           "ipfs",
-		repo:            "kubo",
-		issueTitle:      fmt.Sprintf("Release %s", version.MajorMinor()[1:]),
-		issueComment:    issueComment,
-		postTitle:       fmt.Sprintf("Kubo %s is out!", version.MajorMinor()[1:]),
-		postCategory:    "News",
-		postTags:        []string{"kubo", "go-ipfs"},
-		postBody:        postBody,
-		matrixRoomAlias: "#ipfs-chatter:ipfs.io",
-		matrixBotAlias:  "@ipfsbot:matrix.org",
-		prerelease:      prerelease,
-		version:         version.Version,
-		majorMinor:      version.MajorMinor(),
-		url:             fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", version.Version),
-	}, nil
 }
 
 func (ctx Promote) Check() error {
-	issue, err := ctx.github.GetIssue(ctx.owner, ctx.repo, ctx.issueTitle)
+	issue, err := ctx.GitHub.GetIssue(repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseIssueTitle(ctx.Version))
 	if err != nil {
 		return err
 	}
-
 	if issue == nil {
-		return &util.CheckError{
-			Action: util.CheckErrorFail,
-			Err:    fmt.Errorf("issue %s not found", ctx.issueTitle),
-		}
+		return fmt.Errorf("issue %s not found (%w)", repos.Kubo.ReleaseIssueTitle(ctx.Version), ErrError)
 	}
 
-	comment, err := ctx.github.GetIssueComment(ctx.owner, ctx.repo, issue.GetNumber(), ctx.issueComment)
+	comment, err := ctx.GitHub.GetIssueComment(repos.Kubo.Owner, repos.Kubo.Repo, issue.GetNumber(), ctx.getReleaseIssueComment())
 	if err != nil {
 		return err
 	}
-
 	if comment == nil {
-		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("comment %s not found", ctx.issueComment)}
+		return fmt.Errorf("comment %s not found (%w)", ctx.getReleaseIssueComment(), ErrFailure)
 	}
 
-	messages, err := ctx.matrix.GetLatestMessagesBy(ctx.matrixRoomAlias, ctx.matrixBotAlias, 100)
+	messages, err := ctx.Matrix.GetLatestMessagesBy("#ipfs-chatter:ipfs.io", "@kubo:ipfs.io", 100)
 	if err != nil {
 		return err
 	}
@@ -110,77 +77,57 @@ func (ctx Promote) Check() error {
 	var found bool
 	for _, message := range messages {
 		body, ok := message.Body()
-		if ok && strings.Contains(body, ctx.postTitle) {
+		if ok && strings.Contains(body, ctx.getDiscoursePostTitle()) {
 			found = true
 			break
 		}
 	}
-
 	if !found {
-		return &util.CheckError{Action: util.CheckErrorRetry, Err: fmt.Errorf("post %s not found", ctx.postTitle)}
+		return fmt.Errorf("post %s not found (%w)", ctx.getDiscoursePostTitle(), ErrFailure)
 	}
 
 	return nil
 }
 
 func (ctx Promote) Run() error {
-	issue, err := ctx.github.GetIssue(ctx.owner, ctx.repo, ctx.issueTitle)
+	issue, err := ctx.GitHub.GetIssue(repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseIssueTitle(ctx.Version))
 	if err != nil {
 		return err
 	}
-
 	if issue == nil {
-		return fmt.Errorf("issue %s not found", ctx.issueTitle)
+		return fmt.Errorf("issue not found")
 	}
 
-	_, err = ctx.github.GetOrCreateIssueComment(ctx.owner, ctx.repo, issue.GetNumber(), ctx.issueComment)
+	_, err = ctx.GitHub.GetOrCreateIssueComment(repos.Kubo.Owner, repos.Kubo.Repo, issue.GetNumber(), ctx.getReleaseIssueComment())
 	if err != nil {
 		return err
 	}
 
-	messages, err := ctx.matrix.GetLatestMessagesBy(ctx.matrixRoomAlias, ctx.matrixBotAlias, 100)
-	if err != nil {
-		return err
+	var confirmation string
+	fmt.Printf(`
+IPFS Discourse does not have API access enabled.
+
+Please go to https://discuss.ipfs.io and create a new topic with the following content:
+Title: %s
+Category: News
+Tags: kubo, go-ipfs
+Body: %s
+
+Remember to pin the topic globally!
+
+Once you have created and pinned the topic, please enter 'yes' to confirm.
+Only 'yes' will be accepted to approve.
+
+Enter a value: `, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
+	fmt.Scanln(&confirmation)
+	if confirmation != "yes" {
+		return fmt.Errorf("confirmation is not 'yes'")
 	}
 
-	var found bool
-	for _, message := range messages {
-		body, ok := message.Body()
-		if ok && strings.Contains(body, ctx.postTitle) {
-			found = true
-			break
-		}
-	}
+	if !ctx.Version.IsPrerelease() {
+		url := fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", ctx.Version)
 
-	if !found {
 		var confirmation string
-
-		fmt.Printf(`
-	IPFS Discourse does not have API access enabled.
-
-	Please go to https://discuss.ipfs.io and create a new topic with the following content:
-	Title: %s
-	Category: %s
-	Tags: %s
-	Body: %s
-
-	Remember to pin the topic globally!
-
-	Once you have created and pinned the topic, please enter 'yes' to confirm.
-	Only 'yes' will be accepted to approve.
-
-	Enter a value: `, ctx.postTitle, ctx.postCategory, ctx.postTags, ctx.postBody)
-
-		fmt.Scanln(&confirmation)
-
-		if confirmation != "yes" {
-			return fmt.Errorf("confirmation is not 'yes'")
-		}
-	}
-
-	if !ctx.prerelease {
-		var confirmation string
-
 		fmt.Printf(`
 Reddit supports only OAuth2 authentication.
 
@@ -191,15 +138,13 @@ Url: %s
 Once you have created the post or if the post already exist, please enter 'yes' to confirm.
 Only 'yes' will be accepted to approve.
 
-Enter a value: `, ctx.url)
-
+Enter a value: `, url)
 		fmt.Scanln(&confirmation)
-
 		if confirmation != "yes" {
 			return fmt.Errorf("confirmation is not 'yes'")
 		}
 
-		file, err := ctx.github.GetFile(ctx.owner, ctx.repo, "docs/changelogs/"+ctx.majorMinor+".md", "release")
+		file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, "docs/changelogs/"+ctx.Version.MajorMinor()+".md", "release")
 		if err != nil {
 			return err
 		}
@@ -228,14 +173,12 @@ What's happening?: #Kubo %s was just released!
 Once you have asked the team to create the tweet, please enter 'yes' to confirm.
 Only 'yes' will be accepted to approve.
 
-Enter a value: `, ctx.version, strings.Join(highlights, "\n"), ctx.url)
-
+Enter a value: `, ctx.Version, strings.Join(highlights, "\n"), url)
 		fmt.Scanln(&confirmation)
-
 		if confirmation != "yes" {
 			return fmt.Errorf("confirmation is not 'yes'")
 		}
-
 	}
+
 	return nil
 }

@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 
 	sv "github.com/Masterminds/semver"
 	"golang.org/x/mod/semver"
@@ -37,4 +38,16 @@ func (v Version) Dev() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("v%s", devVersion.String()), nil
+}
+
+func (v Version) IsPrerelease() bool {
+	return v.Prerelease() != ""
+}
+
+func (v Version) String() string {
+	return v.Version
+}
+
+func (v Version) MajorMinorPatch() string {
+	return strings.TrimSuffix(v.Version, semver.Prerelease(v.Version)+semver.Build(v.Version))
 }
