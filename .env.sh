@@ -70,7 +70,7 @@ fi
 
 gpg_key="$GPG_KEY"
 if [[ -z "$gpg_key" ]]; then
-  gpg_key="$(gpg --armor --pinentry-mode=loopback --passphrase "$gpg_passphrase" --export-secret-key "$GPG_ID" -w0 | base64 -w0)"
+  gpg_key="$(gpg --armor --pinentry-mode=loopback --passphrase "$gpg_passphrase" --export-secret-key "$gpg_id" -w0 | base64 -w0)"
 fi
 if [[ -z "$gpg_key" ]]; then
   echo "GPG key is required"
@@ -102,7 +102,7 @@ export GITHUB_USER_NAME="$github_user_name"
 export GITHUB_USER_EMAIL="$github_user_email"
 
 export GPG_ID="$gpg_id"
-export GPG_PASSPHRASE="$gpg_passhrase"
+export GPG_PASSPHRASE="$gpg_passphrase"
 export GPG_KEY="$gpg_key"
 
 export MATRIX_USER="$matrix_user"

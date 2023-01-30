@@ -1,9 +1,11 @@
 package main
 
 import (
-	"log"
+	"errors"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ipfs/kuboreleaser/actions"
 	"github.com/ipfs/kuboreleaser/git"
@@ -15,32 +17,55 @@ import (
 
 func Execute(action actions.IAction, c *cli.Context) error {
 	if !c.Bool("skip-check-before") {
+		log.Info("Checking the status of the action...")
 		err := action.Check()
-		switch err := err.(type) {
-		case *util.CheckError:
-			if err.Action != util.CheckErrorRetry {
+		if err != nil {
+			if !errors.Is(err, actions.ErrIncomplete) {
 				return err
 			} else {
-				log.Println(err)
+				log.Info("The action is not complete yet, continuing...", err)
 			}
-		default:
-			return err
+		} else {
+			log.Info("Action already completed")
+			return nil
 		}
+	} else {
+		log.Info("Skipping the check before running the action")
 	}
 
 	if !c.Bool("skip-run") {
+		log.Info("Running the action...")
 		err := action.Run()
 		if err != nil {
 			return err
 		}
+	} else {
+		log.Info("Skipping the run of the action")
 	}
 
 	if !c.Bool("skip-check-after") {
-		time.Sleep(time.Duration(10) * time.Second)
-		err := action.Check()
-		if err != nil {
-			return err
+		duration := time.Second * 10
+		for {
+			log.Info("Sleeping for ", duration, "...")
+			time.Sleep(duration)
+			if duration < time.Minute*10 {
+				duration = duration * 2
+			}
+
+			log.Info("Checking the status of the action...")
+			err := action.Check()
+			if err != nil {
+				if errors.Is(err, actions.ErrInProgress) && !c.Bool("skip-wait") {
+					log.Info("The action is still in progress, continuing...", err)
+					continue
+				}
+				return err
+			}
+			log.Info("Action completed")
+			return nil
 		}
+	} else {
+		log.Info("Skipping the check after running the action")
 	}
 
 	return nil
@@ -63,6 +88,10 @@ func main() {
 				Name:    "skip-check-after",
 				Aliases: []string{"sca"},
 				Usage:   "skip the check of the command after the run",
+			}, &cli.BoolFlag{
+				Name:    "skip-wait",
+				Aliases: []string{"sw"},
+				Usage:   "skip the wait for the command to complete after the run",
 			},
 		},
 		Commands: []*cli.Command{
@@ -77,21 +106,25 @@ func main() {
 					},
 				},
 				Before: func(c *cli.Context) error {
+					log.Debug("Initializing git client...")
 					git, err := git.NewClient()
 					if err != nil {
 						return err
 					}
 
+					log.Debug("Initializing GitHub client...")
 					github, err := github.NewClient()
 					if err != nil {
 						return err
 					}
 
+					log.Debug("Initializing Matrix client...")
 					matrix, err := matrix.NewClient()
 					if err != nil {
 						return err
 					}
 
+					log.Debug("Initializing version...")
 					version, err := util.NewVersion(c.String("version"))
 					if err != nil {
 						return err
@@ -106,14 +139,14 @@ func main() {
 				},
 				Subcommands: []*cli.Command{
 					{
-						Name:  "cut-branch",
-						Usage: "Cut a new branch",
+						Name:  "prepare-branch",
+						Usage: "Prepare a branch for the release",
 						Action: func(c *cli.Context) error {
 							git := c.App.Metadata["git"].(*git.Client)
 							github := c.App.Metadata["github"].(*github.Client)
 							version := c.App.Metadata["version"].(*util.Version)
 
-							action := &actions.CutBranch{
+							action := &actions.PrepareBranch{
 								Git:     git,
 								GitHub:  github,
 								Version: version,
@@ -336,6 +369,13 @@ func main() {
 			},
 		},
 	}
+
+	formatter := &log.TextFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+		FullTimestamp:   true,
+	}
+	log.SetFormatter(formatter)
+	log.SetLevel(log.DebugLevel)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)

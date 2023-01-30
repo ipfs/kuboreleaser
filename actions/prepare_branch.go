@@ -9,25 +9,32 @@ import (
 	"github.com/ipfs/kuboreleaser/util"
 )
 
-type CutBranch struct {
+type PrepareBranch struct {
 	Git     *git.Client
 	GitHub  *github.Client
 	Version *util.Version
 }
 
-func (ctx CutBranch) Check() error {
+func (ctx PrepareBranch) Check() error {
 	versionReleaseBranch := repos.Kubo.VersionReleaseBranch(ctx.Version)
-	versionUpdateBranch := repos.Kubo.VersionUpdateBranch(ctx.Version)
 
-	err := CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionUpdateBranch, true)
+	err := CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionReleaseBranch, true)
 	if err != nil {
 		return err
 	}
 
-	return CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionReleaseBranch, !ctx.Version.IsPrerelease())
+	if !ctx.Version.IsPatch() {
+		versionUpdateBranch := repos.Kubo.VersionUpdateBranch(ctx.Version)
+		err := CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionUpdateBranch, !ctx.Version.IsPrerelease())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (ctx CutBranch) UpdateVersion(branch, source, currentVersionNumber, base, title, body string, draft bool) error {
+func (ctx PrepareBranch) UpdateVersion(branch, source, currentVersionNumber, base, title, body string, draft bool) error {
 	b, err := ctx.GitHub.GetOrCreateBranch(repos.Kubo.Owner, repos.Kubo.Repo, branch, source)
 	if err != nil {
 		return err
@@ -42,14 +49,19 @@ func (ctx CutBranch) UpdateVersion(branch, source, currentVersionNumber, base, t
 	return err
 }
 
-func (ctx CutBranch) Run() error {
+func (ctx PrepareBranch) Run() error {
 	dev, err := ctx.Version.Dev()
 	if err != nil {
 		return err
 	}
 
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
-	source := repos.Kubo.DefaultBranch
+	var source string
+	if ctx.Version.IsPatch() {
+		source = repos.Kubo.ReleaseBranch
+	} else {
+		source = repos.Kubo.DefaultBranch
+	}
 	currentVersionNumber := ctx.Version.String()[1:]
 	base := repos.Kubo.ReleaseBranch
 	title := fmt.Sprintf("Release: %s", ctx.Version.MajorMinorPatch())
@@ -61,13 +73,20 @@ func (ctx CutBranch) Run() error {
 		return err
 	}
 
-	branch = repos.Kubo.VersionUpdateBranch(ctx.Version)
-	source = repos.Kubo.DefaultBranch
-	currentVersionNumber = dev[1:]
-	base = repos.Kubo.DefaultBranch
-	title = fmt.Sprintf("Update Version: %s", ctx.Version.MajorMinor())
-	body = fmt.Sprintf("This PR updates version as part of the %s release", ctx.Version.MajorMinor())
-	draft = false
+	if !ctx.Version.IsPatch() {
+		branch = repos.Kubo.VersionUpdateBranch(ctx.Version)
+		source = repos.Kubo.DefaultBranch
+		currentVersionNumber = dev[1:]
+		base = repos.Kubo.DefaultBranch
+		title = fmt.Sprintf("Update Version: %s", ctx.Version.MajorMinor())
+		body = fmt.Sprintf("This PR updates version as part of the %s release", ctx.Version.MajorMinor())
+		draft = false
 
-	return ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
+		err := ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -14,9 +14,9 @@ type IAction interface {
 }
 
 var (
-	ErrIncomplete = errors.New("invalid argument")
-	ErrFailure    = errors.New("operation failed")
-	ErrError      = errors.New("operation failed irrecoverably")
+	ErrInProgress = errors.New("the action is in progress")
+	ErrIncomplete = errors.New("the action is not complete")
+	ErrFailure    = errors.New("the action failed and requires manual intervention")
 )
 
 func CheckBranch(github *github.Client, owner, repo, branch string) error {
@@ -25,7 +25,7 @@ func CheckBranch(github *github.Client, owner, repo, branch string) error {
 		return err
 	}
 	if len(runs) > 0 {
-		return fmt.Errorf("check %s is not completed yet (%w)", runs[0].GetName(), ErrIncomplete)
+		return fmt.Errorf("check %s is not completed yet (%w)", runs[0].GetName(), ErrInProgress)
 	}
 
 	runs, err = github.GetUnsuccessfulCheckRuns(owner, repo, branch)
@@ -33,7 +33,7 @@ func CheckBranch(github *github.Client, owner, repo, branch string) error {
 		return err
 	}
 	if len(runs) > 0 {
-		return fmt.Errorf("check %s is not successful (%w)", runs[0].GetName(), ErrFailure)
+		return fmt.Errorf("check %s is not successful (%w)", runs[0].GetName(), ErrIncomplete)
 	}
 
 	return nil
@@ -45,7 +45,7 @@ func CheckPR(github *github.Client, owner, repo, head string, shouldBeMerged boo
 		return err
 	}
 	if pr == nil {
-		return fmt.Errorf("PR not found (%w)", ErrFailure)
+		return fmt.Errorf("PR not found (%w)", ErrIncomplete)
 	}
 
 	err = CheckBranch(github, owner, repo, head)
@@ -54,7 +54,7 @@ func CheckPR(github *github.Client, owner, repo, head string, shouldBeMerged boo
 	}
 
 	if shouldBeMerged && !pr.GetMerged() {
-		return fmt.Errorf("PR is not merged (%w)", ErrIncomplete)
+		return fmt.Errorf("PR is not merged (%w)", ErrInProgress)
 	}
 
 	return nil
@@ -66,13 +66,13 @@ func CheckWorkflowRun(github *github.Client, owner, repo, file, job, pattern str
 		return err
 	}
 	if run == nil {
-		return fmt.Errorf("workflow run not found (%w)", ErrFailure)
+		return fmt.Errorf("workflow run not found (%w)", ErrIncomplete)
 	}
 	if run.GetStatus() != "completed" {
-		return fmt.Errorf("the latest run is not completed (%w)", ErrIncomplete)
+		return fmt.Errorf("the latest run is not completed (%w)", ErrInProgress)
 	}
 	if run.GetConclusion() != "success" {
-		return fmt.Errorf("the latest run did not succeed (%w)", ErrError)
+		return fmt.Errorf("the latest run did not succeed (%w)", ErrFailure)
 	}
 
 	runLogs, err := github.GetWorkflowRunLogs(owner, repo, run.GetID())
@@ -82,7 +82,7 @@ func CheckWorkflowRun(github *github.Client, owner, repo, file, job, pattern str
 
 	jobLogs := runLogs.JobLogs[job]
 	if jobLogs == nil {
-		return fmt.Errorf("the latest run does not have a %s job (%w)", job, ErrError)
+		return fmt.Errorf("the latest run does not have a %s job (%w)", job, ErrFailure)
 	}
 
 	matched, err := regexp.MatchString(pattern, jobLogs.RawLogs)
@@ -91,7 +91,7 @@ func CheckWorkflowRun(github *github.Client, owner, repo, file, job, pattern str
 	}
 
 	if !matched {
-		return fmt.Errorf("the latest run does not have the pattern %s (%w)", pattern, ErrFailure)
+		return fmt.Errorf("the latest run does not have the pattern %s (%w)", pattern, ErrIncomplete)
 	}
 
 	return nil

@@ -18,5 +18,5 @@ func (ctx TestIPFSCompanion) Check() error {
 }
 
 func (ctx TestIPFSCompanion) Run() error {
-	return ctx.GitHub.CreateWorkflowRun(repos.IPFSCompanion.Owner, repos.IPFSCompanion.Repo, repos.IPFSCompanion.WorkflowName, repos.IPFSCompanion.DefaultBranch)
+	return ctx.GitHub.CreateWorkflowRun(repos.IPFSCompanion.Owner, repos.IPFSCompanion.Repo, repos.IPFSCompanion.WorkflowName, repos.IPFSCompanion.DefaultBranch, github.WorkflowRunInput{Name: "kubo-version", Value: ctx.Version.String()})
 }

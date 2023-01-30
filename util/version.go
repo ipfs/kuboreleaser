@@ -51,3 +51,11 @@ func (v Version) String() string {
 func (v Version) MajorMinorPatch() string {
 	return strings.TrimSuffix(v.Version, semver.Prerelease(v.Version)+semver.Build(v.Version))
 }
+
+func (v Version) Patch() string {
+	return strings.TrimPrefix(v.MajorMinorPatch(), v.MajorMinor())[1:]
+}
+
+func (v Version) IsPatch() bool {
+	return v.Patch() != "0"
+}

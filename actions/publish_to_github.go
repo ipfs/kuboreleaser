@@ -3,6 +3,7 @@ package actions
 import (
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/ipfs/kuboreleaser/github"
@@ -21,7 +22,7 @@ func (ctx PublishToGitHub) Check() error {
 		return err
 	}
 	if release == nil {
-		return fmt.Errorf("release not found (%w)", ErrFailure)
+		return fmt.Errorf("release not found (%w)", ErrIncomplete)
 	}
 
 	return CheckWorkflowRun(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.SyncReleaseAssetsWorkflowJobName, ctx.Version.String())
@@ -43,10 +44,22 @@ func (ctx PublishToGitHub) Run() error {
 		}
 
 		body = string(content)
+
 		index := strings.Index(body, "- [Overview](#overview)\n")
 		if index != -1 {
 			index += len("- [Overview](#overview)\n")
 			body = body[index:]
+		}
+
+		if ctx.Version.IsPatch() {
+			patch, err := strconv.Atoi(ctx.Version.Patch())
+			if err != nil {
+				return err
+			}
+			index = strings.Index(body, fmt.Sprintf("## %s.%d\n", ctx.Version.MajorMinor(), patch-1))
+			if index != -1 {
+				body = body[:index]
+			}
 		}
 	}
 

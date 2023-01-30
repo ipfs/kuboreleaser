@@ -37,7 +37,7 @@ func (ctx NotifyBifrost) Check() error {
 		return err
 	}
 	if issue == nil {
-		return fmt.Errorf("issue %s not found (%w)", ctx.getIssueTitle(), ErrFailure)
+		return fmt.Errorf("issue %s not found (%w)", ctx.getIssueTitle(), ErrIncomplete)
 	}
 
 	if !ctx.isAdvanceNotice() {
@@ -46,7 +46,7 @@ func (ctx NotifyBifrost) Check() error {
 			return err
 		}
 		if comment == nil {
-			return fmt.Errorf("comment %s not found (%w)", ctx.getIssueComment(), ErrFailure)
+			return fmt.Errorf("comment %s not found (%w)", ctx.getIssueComment(), ErrIncomplete)
 		}
 	}
 

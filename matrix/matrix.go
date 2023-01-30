@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/matrix-org/gomatrix"
+	log "github.com/sirupsen/logrus"
 )
 
 type Client struct {
@@ -55,14 +56,33 @@ type RespRoomID struct {
 }
 
 func (c *Client) GetRoomID(roomAlias string) (*RespRoomID, error) {
+	log.WithFields(log.Fields{
+		"roomAlias": roomAlias,
+	}).Debug("Getting Room ID...")
+
 	u := c.matrix.BuildBaseURL("_matrix/client/v3/directory/room/", roomAlias)
 
 	var resp *RespRoomID
 	err := c.matrix.MakeRequest("GET", u, nil, &resp)
-	return resp, err
+	if err != nil {
+		return nil, err
+	}
+	log.WithFields(log.Fields{
+		"roomID": resp.RoomID,
+	}).Debug("Got Room ID")
+	return resp, nil
 }
 
 func (c *Client) GetMessages(roomID, from, to string, dir rune, limit int, filter string) (*gomatrix.RespMessages, error) {
+	log.WithFields(log.Fields{
+		"roomID": roomID,
+		"from":   from,
+		"to":     to,
+		"dir":    dir,
+		"limit":  limit,
+		"filter": filter,
+	}).Debug("Getting Messages...")
+
 	u, err := url.Parse(c.matrix.BuildBaseURL("_matrix/client/v3/rooms/", roomID, "/messages"))
 	if err != nil {
 		return nil, err
@@ -84,7 +104,15 @@ func (c *Client) GetMessages(roomID, from, to string, dir rune, limit int, filte
 
 	var resp *gomatrix.RespMessages
 	err = c.matrix.MakeRequest("GET", u.String(), nil, &resp)
-	return resp, err
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{
+		"chunk": resp.Chunk,
+	}).Debug("Got Messages")
+
+	return resp, nil
 }
 
 func (c *Client) GetLatestMessagesBy(roomAlias, author string, limit int) ([]gomatrix.Event, error) {

@@ -24,3 +24,7 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 - [ ] account for checks that are skipped (e.g diff in publish-to-distributions@master)
 - [ ] handle patch releases in cut branch
 - [ ] tell user to merge PRs, e.g. in publish to dists
+- [ ] consider splitting prepare branch and wait for branch checks to be complete
+- [ ] retrieving check runs fails if the branch was deleted
+- [ ] link to the release in bifrost comms
+- [ ] link to the release issue in the PRs

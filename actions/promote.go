@@ -58,7 +58,7 @@ func (ctx Promote) Check() error {
 		return err
 	}
 	if issue == nil {
-		return fmt.Errorf("issue %s not found (%w)", repos.Kubo.ReleaseIssueTitle(ctx.Version), ErrError)
+		return fmt.Errorf("issue %s not found (%w)", repos.Kubo.ReleaseIssueTitle(ctx.Version), ErrFailure)
 	}
 
 	comment, err := ctx.GitHub.GetIssueComment(repos.Kubo.Owner, repos.Kubo.Repo, issue.GetNumber(), ctx.getReleaseIssueComment())
@@ -66,10 +66,10 @@ func (ctx Promote) Check() error {
 		return err
 	}
 	if comment == nil {
-		return fmt.Errorf("comment %s not found (%w)", ctx.getReleaseIssueComment(), ErrFailure)
+		return fmt.Errorf("comment %s not found (%w)", ctx.getReleaseIssueComment(), ErrIncomplete)
 	}
 
-	messages, err := ctx.Matrix.GetLatestMessagesBy("#ipfs-chatter:ipfs.io", "@kubo:ipfs.io", 100)
+	messages, err := ctx.Matrix.GetLatestMessagesBy("#ipfs-chatter:ipfs.io", "@ipfsbot:matrix.org", 10)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (ctx Promote) Check() error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("post %s not found (%w)", ctx.getDiscoursePostTitle(), ErrFailure)
+		return fmt.Errorf("post %s not found (%w)", ctx.getDiscoursePostTitle(), ErrIncomplete)
 	}
 
 	return nil
@@ -124,7 +124,7 @@ Enter a value: `, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
 		return fmt.Errorf("confirmation is not 'yes'")
 	}
 
-	if !ctx.Version.IsPrerelease() {
+	if !ctx.Version.IsPrerelease() && !ctx.Version.IsPatch() {
 		url := fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", ctx.Version)
 
 		var confirmation string

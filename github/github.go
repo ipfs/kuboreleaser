@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -37,7 +37,11 @@ func NewClient() (*Client, error) {
 }
 
 func (c *Client) GetIssue(owner, repo, title string) (*github.Issue, error) {
-	log.Printf("Getting issue [owner: %s, repo: %s, title: %s]\n", owner, repo, title)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"title": title,
+	}).Debug("Searching for issue...")
 
 	opt := &github.SearchOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -61,16 +65,38 @@ func (c *Client) GetIssue(owner, repo, title string) (*github.Issue, error) {
 		opt.Page = r.NextPage
 	}
 
+	if issue != nil {
+		log.WithFields(log.Fields{
+			"url": issue.GetHTMLURL(),
+		}).Debug("Found issue")
+	} else {
+		log.Debug("Issue not found")
+	}
+
 	return issue, nil
 }
 
 func (c *Client) CreateIssue(owner, repo, title, body string) (*github.Issue, error) {
-	log.Printf("Creating issue [owner: %s, repo: %s, title: %s]\n", owner, repo, title)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"title": title,
+		"body":  body,
+	}).Debug("Creating issue...")
 
 	issue, _, err := c.github.Issues.Create(context.Background(), owner, repo, &github.IssueRequest{
 		Title: &title,
 		Body:  &body,
 	})
+
+	if issue != nil {
+		log.WithFields(log.Fields{
+			"url": issue.GetHTMLURL(),
+		}).Debug("Created issue")
+	} else {
+		log.Debug("Issue not created")
+	}
+
 	return issue, err
 }
 
@@ -86,7 +112,12 @@ func (c *Client) GetOrCreateIssue(owner, repo, title, body string) (*github.Issu
 }
 
 func (c *Client) GetIssueComment(owner, repo string, number int, body string) (*github.IssueComment, error) {
-	log.Printf("Getting issue comment [owner: %s, repo: %s, number: %d, body: %s]\n", owner, repo, number, body)
+	log.WithFields(log.Fields{
+		"owner":  owner,
+		"repo":   repo,
+		"number": number,
+		"body":   body,
+	}).Debug("Searching for issue comment...")
 
 	opt := &github.IssueListCommentsOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -109,15 +140,37 @@ func (c *Client) GetIssueComment(owner, repo string, number int, body string) (*
 		opt.Page = r.NextPage
 	}
 
+	if comment != nil {
+		log.WithFields(log.Fields{
+			"url": comment.GetHTMLURL(),
+		}).Debug("Found comment")
+	} else {
+		log.Debug("Comment not found")
+	}
+
 	return comment, nil
 }
 
 func (c *Client) CreateIssueComment(owner, repo string, number int, body string) (*github.IssueComment, error) {
-	log.Printf("Creating issue comment [owner: %s, repo: %s, number: %d, body: %s]\n", owner, repo, number, body)
+	log.WithFields(log.Fields{
+		"owner":  owner,
+		"repo":   repo,
+		"number": number,
+		"body":   body,
+	}).Debug("Creating issue comment...")
 
 	comment, _, err := c.github.Issues.CreateComment(context.Background(), owner, repo, number, &github.IssueComment{
 		Body: &body,
 	})
+
+	if comment != nil {
+		log.WithFields(log.Fields{
+			"url": comment.GetHTMLURL(),
+		}).Debug("Created comment")
+	} else {
+		log.Debug("Comment not created")
+	}
+
 	return comment, err
 }
 
@@ -133,24 +186,42 @@ func (c *Client) GetOrCreateIssueComment(owner, repo string, number int, body st
 }
 
 func (c *Client) GetBranch(owner, repo, name string) (*github.Branch, error) {
-	log.Printf("Getting branch [owner: %s, repo: %s, name: %s]\n", owner, repo, name)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"name":  name,
+	}).Debug("Searching for branch...")
 
 	branch, _, err := c.github.Repositories.GetBranch(context.Background(), owner, repo, name, false)
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
+
+	if branch != nil {
+		log.WithFields(log.Fields{
+			"commit": branch.GetCommit().GetSHA(),
+		}).Debug("Found branch")
+	} else {
+		log.Debug("Branch not found")
+	}
+
 	return branch, err
 }
 
 func (c *Client) CreateBranch(owner, repo, name, source string) (*github.Branch, error) {
-	log.Printf("Creating branch [owner: %s, repo: %s, name: %s, source: %s]\n", owner, repo, name, source)
+	log.WithFields(log.Fields{
+		"owner":  owner,
+		"repo":   repo,
+		"name":   name,
+		"source": source,
+	}).Debug("Creating branch...")
 
 	r, _, err := c.github.Git.GetRef(context.Background(), owner, repo, "refs/heads/"+source)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _, err = c.github.Git.CreateRef(context.Background(), owner, repo, &github.Reference{
+	b, _, err := c.github.Git.CreateRef(context.Background(), owner, repo, &github.Reference{
 		Ref:    github.String("refs/heads/" + name),
 		Object: r.GetObject(),
 	})
@@ -158,12 +229,18 @@ func (c *Client) CreateBranch(owner, repo, name, source string) (*github.Branch,
 		return nil, err
 	}
 
+	if b != nil {
+		log.WithFields(log.Fields{
+			"url": b.GetURL(),
+		}).Debug("Created branch")
+	} else {
+		log.Debug("Branch not created")
+	}
+
 	return c.GetBranch(owner, repo, name)
 }
 
 func (c *Client) GetOrCreateBranch(owner, repo, name, source string) (*github.Branch, error) {
-	log.Printf("Getting or creating branch [owner: %s, repo: %s, name: %s, source: %s]\n", owner, repo, name, source)
-
 	branch, err := c.GetBranch(owner, repo, name)
 	if err != nil {
 		return nil, err
@@ -176,7 +253,11 @@ func (c *Client) GetOrCreateBranch(owner, repo, name, source string) (*github.Br
 }
 
 func (c *Client) GetPR(owner, repo, head string) (*github.PullRequest, error) {
-	log.Printf("Getting PR [owner: %s, repo: %s, head: %s]\n", owner, repo, head)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"head":  head,
+	}).Debug("Searching for PR...")
 
 	q := fmt.Sprintf("is:pr repo:%s/%s head:%s", owner, repo, head)
 	r, _, err := c.github.Search.Issues(context.Background(), q, &github.SearchOptions{
@@ -192,11 +273,28 @@ func (c *Client) GetPR(owner, repo, head string) (*github.PullRequest, error) {
 	n := r.Issues[0].GetNumber()
 
 	pr, _, err := c.github.PullRequests.Get(context.Background(), owner, repo, n)
+
+	if pr != nil {
+		log.WithFields(log.Fields{
+			"url": pr.GetHTMLURL(),
+		}).Debug("Found PR")
+	} else {
+		log.Debug("PR not found")
+	}
+
 	return pr, err
 }
 
 func (c *Client) CreatePR(owner, repo, head, base, title, body string, draft bool) (*github.PullRequest, error) {
-	log.Printf("Creating PR [owner: %s, repo: %s, head: %s, base: %s, title: %s, body: %s, draft: %t]\n", owner, repo, head, base, title, body, draft)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"head":  head,
+		"base":  base,
+		"title": title,
+		"body":  body,
+		"draft": draft,
+	}).Debug("Creating PR...")
 
 	pr, _, err := c.github.PullRequests.Create(context.Background(), owner, repo, &github.NewPullRequest{
 		Title: &title,
@@ -205,12 +303,19 @@ func (c *Client) CreatePR(owner, repo, head, base, title, body string, draft boo
 		Body:  &body,
 		Draft: &draft,
 	})
+
+	if pr != nil {
+		log.WithFields(log.Fields{
+			"url": pr.GetHTMLURL(),
+		}).Debug("Created PR")
+	} else {
+		log.Debug("PR not created")
+	}
+
 	return pr, err
 }
 
 func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draft bool) (*github.PullRequest, error) {
-	log.Printf("Getting or creating PR [owner: %s, repo: %s, head: %s, base: %s, title: %s, body: %s, draft: %t]\n", owner, repo, head, base, title, body, draft)
-
 	pr, err := c.GetPR(owner, repo, head)
 	if err != nil {
 		return nil, err
@@ -223,11 +328,25 @@ func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draf
 }
 
 func (c *Client) GetFile(owner, repo, path, ref string) (*github.RepositoryContent, error) {
-	log.Printf("Getting file [owner: %s, repo: %s, path: %s, ref: %s]\n", owner, repo, path, ref)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"path":  path,
+		"ref":   ref,
+	}).Debug("Searching for file...")
 
 	f, _, _, err := c.github.Repositories.GetContents(context.Background(), owner, repo, path, &github.RepositoryContentGetOptions{
 		Ref: ref,
 	})
+
+	if f != nil {
+		log.WithFields(log.Fields{
+			"url": f.GetHTMLURL(),
+		}).Debug("Found file")
+	} else {
+		log.Debug("File not found")
+	}
+
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
@@ -235,7 +354,11 @@ func (c *Client) GetFile(owner, repo, path, ref string) (*github.RepositoryConte
 }
 
 func (c *Client) GetCheckRuns(owner, repo, ref string) ([]*github.CheckRun, error) {
-	log.Printf("Getting checks [owner: %s, repo: %s, ref: %s]\n", owner, repo, ref)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"ref":   ref,
+	}).Debug("Searching for check runs...")
 
 	opt := &github.ListCheckRunsOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -252,11 +375,28 @@ func (c *Client) GetCheckRuns(owner, repo, ref string) ([]*github.CheckRun, erro
 		}
 		opt.Page = r.NextPage
 	}
+
+	if len(runs) > 0 {
+		urls := []string{}
+		for _, r := range runs {
+			urls = append(urls, r.GetHTMLURL())
+		}
+		log.WithFields(log.Fields{
+			"urls": urls,
+		}).Debug("Found check runs")
+	} else {
+		log.Debug("Check runs not found")
+	}
+
 	return runs, nil
 }
 
 func (c *Client) GetIncompleteCheckRuns(owner, repo, ref string) ([]*github.CheckRun, error) {
-	log.Printf("Getting incomplete checks [owner: %s, repo: %s, ref: %s]\n", owner, repo, ref)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"ref":   ref,
+	}).Debug("Searching for incomplete check runs...")
 
 	runs, err := c.GetCheckRuns(owner, repo, ref)
 	if err != nil {
@@ -269,11 +409,28 @@ func (c *Client) GetIncompleteCheckRuns(owner, repo, ref string) ([]*github.Chec
 			incomplete = append(incomplete, r)
 		}
 	}
+
+	if len(incomplete) > 0 {
+		urls := []string{}
+		for _, r := range incomplete {
+			urls = append(urls, r.GetHTMLURL())
+		}
+		log.WithFields(log.Fields{
+			"urls": urls,
+		}).Debug("Found incomplete check runs")
+	} else {
+		log.Debug("Incomplete check runs not found")
+	}
+
 	return incomplete, nil
 }
 
 func (c *Client) GetUnsuccessfulCheckRuns(owner, repo, ref string) ([]*github.CheckRun, error) {
-	log.Printf("Getting unsuccessful checks [owner: %s, repo: %s, ref: %s]\n", owner, repo, ref)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"ref":   ref,
+	}).Debug("Searching for unsuccessful check runs...")
 
 	runs, err := c.GetCheckRuns(owner, repo, ref)
 	if err != nil {
@@ -286,6 +443,19 @@ func (c *Client) GetUnsuccessfulCheckRuns(owner, repo, ref string) ([]*github.Ch
 			unsuccessful = append(unsuccessful, r)
 		}
 	}
+
+	if len(unsuccessful) > 0 {
+		urls := []string{}
+		for _, r := range unsuccessful {
+			urls = append(urls, r.GetHTMLURL())
+		}
+		log.WithFields(log.Fields{
+			"urls": urls,
+		}).Debug("Found unsuccessful check runs")
+	} else {
+		log.Debug("Unsuccessful check runs not found")
+	}
+
 	return unsuccessful, nil
 }
 
@@ -295,7 +465,13 @@ type WorkflowRunInput struct {
 }
 
 func (c *Client) CreateWorkflowRun(owner, repo, file, ref string, inputs ...WorkflowRunInput) error {
-	log.Printf("Creating workflow run [owner: %s, repo: %s, file: %s, ref: %s]\n", owner, repo, file, ref)
+	log.WithFields(log.Fields{
+		"owner":  owner,
+		"repo":   repo,
+		"file":   file,
+		"ref":    ref,
+		"inputs": inputs,
+	}).Debug("Creating workflow run...")
 
 	is := make(map[string]interface{})
 	for _, i := range inputs {
@@ -306,11 +482,23 @@ func (c *Client) CreateWorkflowRun(owner, repo, file, ref string, inputs ...Work
 		Ref:    ref,
 		Inputs: is,
 	})
+
+	if err != nil {
+		log.Debug("Failed to create workflow run")
+	} else {
+		log.Debug("Created workflow run")
+	}
+
 	return err
 }
 
 func (c *Client) GetWorkflowRun(owner, repo, file string, completed bool) (*github.WorkflowRun, error) {
-	log.Printf("Getting workflow run [owner: %s, repo: %s, file: %s, completed: %v]\n", owner, repo, file, completed)
+	log.WithFields(log.Fields{
+		"owner":     owner,
+		"repo":      repo,
+		"file":      file,
+		"completed": completed,
+	}).Debug("Searching for workflow run...")
 
 	opt := &github.ListWorkflowRunsOptions{
 		ListOptions: github.ListOptions{PerPage: 1},
@@ -322,10 +510,16 @@ func (c *Client) GetWorkflowRun(owner, repo, file string, completed bool) (*gith
 	if err != nil {
 		return nil, err
 	}
-	if len(r.WorkflowRuns) == 0 {
+
+	if len(r.WorkflowRuns) > 0 {
+		log.WithFields(log.Fields{
+			"url": r.WorkflowRuns[0].GetHTMLURL(),
+		}).Debug("Found workflow run")
+		return r.WorkflowRuns[0], nil
+	} else {
+		log.Debug("Workflow run not found")
 		return nil, nil
 	}
-	return r.WorkflowRuns[0], nil
 }
 
 type WorkflowRunJobStepLogs struct {
@@ -344,7 +538,11 @@ type WorkflowRunLogs struct {
 }
 
 func (c *Client) GetWorkflowRunLogs(owner, repo string, id int64) (*WorkflowRunLogs, error) {
-	log.Printf("Getting workflow run logs [owner: %s, repo: %s, id: %v]\n", owner, repo, id)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"id":    id,
+	}).Debug("Searching for workflow run logs...")
 
 	url, _, err := c.github.Actions.GetWorkflowRunLogs(context.Background(), owner, repo, id, true)
 	if err != nil {
@@ -416,21 +614,46 @@ func (c *Client) GetWorkflowRunLogs(owner, repo string, id int64) (*WorkflowRunL
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"url": url,
+	}).Debug("Got workflow run logs")
+
 	return logs, nil
 }
 
 func (c *Client) GetRelease(owner, repo, tag string) (*github.RepositoryRelease, error) {
-	log.Printf("Getting release [owner: %s, repo: %s, tag: %s]\n", owner, repo, tag)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"tag":   tag,
+	}).Debug("Searching for release...")
 
 	r, _, err := c.github.Repositories.GetReleaseByTag(context.Background(), owner, repo, tag)
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
+
+	if r != nil {
+		log.WithFields(log.Fields{
+			"url": r.GetHTMLURL(),
+		}).Debug("Found release")
+	} else {
+		log.Debug("Release not found")
+	}
+
 	return r, err
 }
 
 func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease bool) (*github.RepositoryRelease, error) {
-	log.Printf("Creating release [owner: %s, repo: %s, tag: %s]\n", owner, repo, tag)
+	log.WithFields(log.Fields{
+		"owner":      owner,
+		"repo":       repo,
+		"tag":        tag,
+		"name":       name,
+		"body":       body,
+		"prerelease": prerelease,
+	}).Debug("Creating release...")
 
 	r, _, err := c.github.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
 		TagName:    &tag,
@@ -438,12 +661,19 @@ func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease b
 		Body:       &body,
 		Prerelease: &prerelease,
 	})
+
+	if r != nil {
+		log.WithFields(log.Fields{
+			"url": r.GetHTMLURL(),
+		}).Debug("Created release")
+	} else {
+		log.Debug("Release not created")
+	}
+
 	return r, err
 }
 
 func (c *Client) GetOrCreateRelease(owner, repo, tag, name, body string, prerelease bool) (*github.RepositoryRelease, error) {
-	log.Printf("Getting or creating release [owner: %s, repo: %s, tag: %s]\n", owner, repo, tag)
-
 	r, err := c.GetRelease(owner, repo, tag)
 	if err != nil {
 		return nil, err
@@ -455,11 +685,32 @@ func (c *Client) GetOrCreateRelease(owner, repo, tag, name, body string, prerele
 }
 
 func (c *Client) GetTag(owner, repo, tag string) (*github.Tag, error) {
-	log.Printf("Getting tag [owner: %s, repo: %s, tag: %s]\n", owner, repo, tag)
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"tag":   tag,
+	}).Debug("Searching for tag...")
 
-	t, _, err := c.github.Git.GetTag(context.Background(), owner, repo, tag)
+	r, _, err := c.github.Git.GetRef(context.Background(), owner, repo, fmt.Sprintf("tags/%s", tag))
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	t, _, err := c.github.Git.GetTag(context.Background(), owner, repo, r.Object.GetSHA())
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
+
+	if t != nil {
+		log.WithFields(log.Fields{
+			"url": t.GetURL(),
+		}).Debug("Found tag")
+	} else {
+		log.Debug("Tag not found")
+	}
+
 	return t, err
 }

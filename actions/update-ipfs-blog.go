@@ -25,15 +25,12 @@ func (ctx UpdateIPFSBlog) Run() error {
 	branch := repos.IPFSBlog.KuboBranch(ctx.Version)
 	title := fmt.Sprintf("Update Kubo: %s", ctx.Version)
 	body := fmt.Sprintf("This PR updates Kubo to %s", ctx.Version)
-	command :=
-		git.Command{Name: "bash", Args: []string{
-			"-c",
-			fmt.Sprintf(`echo "---
-$(cat '%s' |
-	head -n-2 |
-	tail -n+2 |
-	yq --yaml-output --indentless '.data |= [
-		{
+	command := git.Command{Name: "yq", Args: []string{
+		"ea",
+		"-i",
+		"-I", "0",
+		"-N",
+		fmt.Sprintf(`[.] | ["---", {"data": [{
 			"title": "Just released: Kubo %s!",
 			"date": "%s",
 			"publish_date": null,
@@ -42,10 +39,9 @@ $(cat '%s' |
 				"go-ipfs",
 				"kubo"
 			]
-		}
-	] + .')
----" > '%s'`, "src/_blog/releasenotes.md", ctx.Version.String()[1:], ctx.Date.Format("2006-01-02"), ctx.Version.String(), "src/_blog/releasenotes.md")}}
-
+		}]} *+ .[0], "---"] | .[]`, ctx.Version.String()[1:], ctx.Date.Format("2006-01-02"), ctx.Version.String()),
+		"src/_blog/releasenotes.md",
+	}}
 	b, err := ctx.GitHub.GetOrCreateBranch(repos.IPFSBlog.Owner, repos.IPFSBlog.Repo, branch, repos.IPFSBlog.DefaultBranch)
 	if err != nil {
 		return err

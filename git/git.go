@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-git/go-git/v5"
@@ -93,15 +94,21 @@ type Clone struct {
 }
 
 func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
-	log.Printf("Cloning [dir: %s, owner: %s, repo: %s, branch: %s, sha: %s]\n", dir, owner, repo, branch, sha)
+	log.WithFields(log.Fields{
+		"dir":    dir,
+		"owner":  owner,
+		"repo":   repo,
+		"branch": branch,
+		"sha":    sha,
+	}).Debug("Cloning...")
 
-	log.Println("Initializing git repository")
+	log.Debug("Initializing git repository...")
 	repository, err := git.PlainInit(dir, false)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println("Creating remote")
+	log.Debug("Adding remote...")
 	remote, err := repository.CreateRemote(&config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{"https://github.com/" + owner + "/" + repo},
@@ -110,7 +117,7 @@ func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
 		return nil, err
 	}
 
-	log.Println("Fetching remote")
+	log.Debug("Fetching...")
 	// https://github.com/go-git/go-git/issues/264
 	err = remote.Fetch(&git.FetchOptions{
 		Auth: c.auth,
@@ -124,12 +131,11 @@ func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
 		return nil, err
 	}
 
-	log.Println("Checking out branch")
+	log.Debug("Checking out...")
 	worktree, err := repository.Worktree()
 	if err != nil {
 		return nil, err
 	}
-
 	err = worktree.Checkout(&git.CheckoutOptions{
 		Hash:   plumbing.NewHash(sha),
 		Branch: plumbing.NewBranchReferenceName(branch),
@@ -139,6 +145,8 @@ func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
 		return nil, err
 	}
 
+	log.Debug("Cloned")
+
 	return &Clone{
 		client:     c,
 		repository: repository,
@@ -147,18 +155,31 @@ func (c *Client) Clone(dir, owner, repo, branch, sha string) (*Clone, error) {
 }
 
 func (c *Clone) Status() (git.Status, error) {
-	log.Println("Getting status")
+	log.Debug("Retrieving status...")
+
 	worktree, err := c.repository.Worktree()
 	if err != nil {
 		return nil, err
 	}
-	return worktree.Status()
+	status, err := worktree.Status()
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{
+		"status": status,
+	}).Debug("Retrieved status")
+
+	return status, nil
 }
 
 func (c *Clone) Commit(glob, message string) (*object.Commit, error) {
-	log.Printf("Committing [glob: %s, message: %s]\n", glob, message)
+	log.WithFields(log.Fields{
+		"glob":    glob,
+		"message": message,
+	}).Debug("Committing...")
 
-	log.Println("Adding files")
+	log.Debug("Adding files...")
 	worktree, err := c.repository.Worktree()
 	if err != nil {
 		return nil, err
@@ -170,7 +191,7 @@ func (c *Clone) Commit(glob, message string) (*object.Commit, error) {
 		return nil, err
 	}
 
-	log.Println("Committing")
+	log.Debug("Creating commit...")
 	hash, err := worktree.Commit(message, &git.CommitOptions{
 		Author: c.client.signature(),
 	})
@@ -178,13 +199,20 @@ func (c *Clone) Commit(glob, message string) (*object.Commit, error) {
 		return nil, err
 	}
 
+	log.WithFields(log.Fields{
+		"hash": hash,
+	}).Debug("Commit created")
+
 	return c.repository.CommitObject(hash)
 }
 
 func (c *Clone) Tag(ref, tag, message string) (*object.Tag, error) {
-	log.Printf("Tagging [ref: %s, tag: %s, message: %s]\n", ref, tag, message)
+	log.WithFields(log.Fields{
+		"ref": ref,
+		"tag": tag,
+	}).Debug("Tagging...")
 
-	log.Println("Creating tag")
+	log.Debug("Creating tag...")
 	obj, err := c.repository.CreateTag(tag, plumbing.NewHash(ref), &git.CreateTagOptions{
 		Tagger:  c.client.signature(),
 		Message: message,
@@ -194,20 +222,31 @@ func (c *Clone) Tag(ref, tag, message string) (*object.Tag, error) {
 		return nil, err
 	}
 
+	log.WithFields(log.Fields{
+		"hash": obj.Hash(),
+	}).Debug("Tag created")
+
 	return c.repository.TagObject(obj.Hash())
 }
 
 func (c *Clone) Push(ref string) error {
-	log.Printf("Pushing [ref: %s]\n", ref)
+	log.WithFields(log.Fields{
+		"ref": ref,
+	}).Debug("Pushing...")
 
-	log.Println("Pushing")
-	return c.repository.Push(&git.PushOptions{
+	err := c.repository.Push(&git.PushOptions{
 		Auth:       c.client.auth,
 		RemoteName: "origin",
 		RefSpecs: []config.RefSpec{
 			config.RefSpec(ref),
 		},
 	})
+
+	if err != nil {
+		log.Debug("Pushed")
+	}
+
+	return err
 }
 
 func (c *Clone) PushBranch(branch string) error {
@@ -224,6 +263,11 @@ type Command struct {
 }
 
 func (c *Command) Run(dir string) error {
+	log.WithFields(log.Fields{
+		"command": c.Name,
+		"args":    c.Args,
+	}).Debug("Running command...")
+
 	cmd := exec.Command(c.Name, c.Args...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout

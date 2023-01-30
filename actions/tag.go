@@ -29,7 +29,7 @@ func (ctx Tag) Check() error {
 		return err
 	}
 	if tag == nil {
-		return fmt.Errorf("tag %s does not exist (%w)", ctx.Version.String(), ErrFailure)
+		return fmt.Errorf("tag %s does not exist (%w)", ctx.Version.String(), ErrIncomplete)
 	}
 	return nil
 }
