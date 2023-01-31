@@ -86,10 +86,25 @@ func (ctx Promote) Check() error {
 		return fmt.Errorf("post %s not found (%w)", ctx.getDiscoursePostTitle(), ErrIncomplete)
 	}
 
+	if !ctx.Version.IsPrerelease() {
+		release, err := ctx.GitHub.GetRelease(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String())
+		if err != nil {
+			return err
+		}
+		if release == nil {
+			return fmt.Errorf("release %s not found (%w)", ctx.Version, ErrFailure)
+		}
+		if !strings.Contains(release.GetBody(), "- 💬 [Discuss]") {
+			return fmt.Errorf("release %s does not contain a discuss link (%w)", ctx.Version, ErrIncomplete)
+		}
+	}
+
 	return nil
 }
 
 func (ctx Promote) Run() error {
+	url := fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", ctx.Version)
+
 	issue, err := ctx.GitHub.GetIssue(repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseIssueTitle(ctx.Version))
 	if err != nil {
 		return err
@@ -116,9 +131,18 @@ Remember to pin the topic globally!`, ctx.getDiscoursePostTitle(), ctx.getDiscou
 		return fmt.Errorf("discourse post not created")
 	}
 
-	if !ctx.Version.IsPrerelease() && !ctx.Version.IsPatch() {
-		url := fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", ctx.Version)
+	if !ctx.Version.IsPrerelease() {
+		prompt := fmt.Sprintf(`Go to %s and add the link to the IPFS Discourse post to the top of the release notes.
 
+Use the following template:
+- 💬 [Discuss](https://discuss.ipfs.io/t/kubo-%s-is-out/XXXX)`, url, strings.ReplaceAll(ctx.Version.String(), ".", "-"))
+
+		if !util.Confirm(prompt) {
+			return fmt.Errorf("discourse post not added to release notes")
+		}
+	}
+
+	if !ctx.Version.IsPrerelease() && !ctx.Version.IsPatch() {
 		prompt := fmt.Sprintf(`Reddit supports only OAuth2 authentication.
 
 Please go to https://www.reddit.com/r/ipfs/new/ and create a new "Link" post with the following content:
