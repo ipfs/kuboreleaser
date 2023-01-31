@@ -48,13 +48,19 @@ func CheckPR(github *github.Client, owner, repo, head string, shouldBeMerged boo
 		return fmt.Errorf("PR not found (%w)", ErrIncomplete)
 	}
 
-	err = CheckBranch(github, owner, repo, head)
-	if err != nil {
-		return err
-	}
+	if !pr.GetMerged() {
+		if pr.GetState() == "closed" {
+			return fmt.Errorf("PR is closed (%w)", ErrIncomplete)
+		}
 
-	if shouldBeMerged && !pr.GetMerged() {
-		return fmt.Errorf("PR is not merged (%w)", ErrInProgress)
+		err = CheckBranch(github, owner, repo, head)
+		if err != nil {
+			return err
+		}
+
+		if shouldBeMerged {
+			return fmt.Errorf("PR is not merged (%w)", ErrInProgress)
+		}
 	}
 
 	return nil

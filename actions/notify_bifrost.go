@@ -24,7 +24,7 @@ func (ctx NotifyBifrost) getIssueBody() string {
 }
 
 func (ctx NotifyBifrost) getIssueComment() string {
-	return fmt.Sprintf("A new Kubo release - %s - was published on %s", ctx.Version, ctx.Date.Format("2006-01-02"))
+	return fmt.Sprintf("A new Kubo release - [%s](%s) - was published on %s", ctx.Version, repos.Kubo.ReleaseURL(ctx.Version), ctx.Date.Format("2006-01-02"))
 }
 
 func (ctx NotifyBifrost) isAdvanceNotice() bool {

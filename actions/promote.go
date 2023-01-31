@@ -103,7 +103,7 @@ func (ctx Promote) Check() error {
 }
 
 func (ctx Promote) Run() error {
-	url := fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", ctx.Version)
+	url := repos.Kubo.ReleaseURL(ctx.Version)
 
 	issue, err := ctx.GitHub.GetIssue(repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseIssueTitle(ctx.Version))
 	if err != nil {

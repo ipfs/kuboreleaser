@@ -9,11 +9,9 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 - [ ] enable auto-merge on created PRs
 - [ ] assign reviewers to the created PRs
 - [ ] check how git-go performs fetch (does it use protocol.version 2?)
-- [ ] handle the case where PR was closed without being merged
 - [ ] add a `--dry-run` flag
-- [ ] change PR to ready for review on final release (e.g. in cut-branch)
 - [ ] automate changelog update (mkreleaselog; might require git in docker)
-- [ ] retrieving check runs fails if the branch was deleted
-- [ ] link to the release in bifrost comms
 - [ ] link to the release issue in the PRs
-- [ ] do not check runs status if the PR is merged
+- [ ] allow to specify args via env vars
+- [ ] remove one level of nesting from the CLI
+- [ ] document how to use kuboreleaser in the README

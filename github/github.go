@@ -5,19 +5,22 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/shurcooL/githubv4"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/google/go-github/v48/github"
 	"golang.org/x/oauth2"
 )
 
 type Client struct {
-	github *github.Client
+	v3 *github.Client
+	v4 *githubv4.Client
 }
 
 func NewClient() (*Client, error) {
@@ -32,7 +35,8 @@ func NewClient() (*Client, error) {
 	o2 := oauth2.NewClient(context.Background(), sts)
 
 	return &Client{
-		github: github.NewClient(o2),
+		v3: github.NewClient(o2),
+		v4: githubv4.NewClient(o2),
 	}, nil
 }
 
@@ -49,7 +53,7 @@ func (c *Client) GetIssue(owner, repo, title string) (*github.Issue, error) {
 	q := fmt.Sprintf("is:issue repo:%s/%s in:title %s", owner, repo, title)
 	var issue *github.Issue
 	for {
-		is, r, err := c.github.Search.Issues(context.Background(), q, opt)
+		is, r, err := c.v3.Search.Issues(context.Background(), q, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +88,7 @@ func (c *Client) CreateIssue(owner, repo, title, body string) (*github.Issue, er
 		"body":  body,
 	}).Debug("Creating issue...")
 
-	issue, _, err := c.github.Issues.Create(context.Background(), owner, repo, &github.IssueRequest{
+	issue, _, err := c.v3.Issues.Create(context.Background(), owner, repo, &github.IssueRequest{
 		Title: &title,
 		Body:  &body,
 	})
@@ -124,7 +128,7 @@ func (c *Client) GetIssueComment(owner, repo string, number int, body string) (*
 	}
 	var comment *github.IssueComment
 	for {
-		cs, r, err := c.github.Issues.ListComments(context.Background(), owner, repo, number, opt)
+		cs, r, err := c.v3.Issues.ListComments(context.Background(), owner, repo, number, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +163,7 @@ func (c *Client) CreateIssueComment(owner, repo string, number int, body string)
 		"body":   body,
 	}).Debug("Creating issue comment...")
 
-	comment, _, err := c.github.Issues.CreateComment(context.Background(), owner, repo, number, &github.IssueComment{
+	comment, _, err := c.v3.Issues.CreateComment(context.Background(), owner, repo, number, &github.IssueComment{
 		Body: &body,
 	})
 
@@ -192,7 +196,7 @@ func (c *Client) GetBranch(owner, repo, name string) (*github.Branch, error) {
 		"name":  name,
 	}).Debug("Searching for branch...")
 
-	branch, _, err := c.github.Repositories.GetBranch(context.Background(), owner, repo, name, false)
+	branch, _, err := c.v3.Repositories.GetBranch(context.Background(), owner, repo, name, false)
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
@@ -216,12 +220,12 @@ func (c *Client) CreateBranch(owner, repo, name, source string) (*github.Branch,
 		"source": source,
 	}).Debug("Creating branch...")
 
-	r, _, err := c.github.Git.GetRef(context.Background(), owner, repo, "refs/heads/"+source)
+	r, _, err := c.v3.Git.GetRef(context.Background(), owner, repo, "refs/heads/"+source)
 	if err != nil {
 		return nil, err
 	}
 
-	b, _, err := c.github.Git.CreateRef(context.Background(), owner, repo, &github.Reference{
+	b, _, err := c.v3.Git.CreateRef(context.Background(), owner, repo, &github.Reference{
 		Ref:    github.String("refs/heads/" + name),
 		Object: r.GetObject(),
 	})
@@ -260,7 +264,7 @@ func (c *Client) GetPR(owner, repo, head string) (*github.PullRequest, error) {
 	}).Debug("Searching for PR...")
 
 	q := fmt.Sprintf("is:pr repo:%s/%s head:%s", owner, repo, head)
-	r, _, err := c.github.Search.Issues(context.Background(), q, &github.SearchOptions{
+	r, _, err := c.v3.Search.Issues(context.Background(), q, &github.SearchOptions{
 		ListOptions: github.ListOptions{PerPage: 1},
 	})
 	if err != nil {
@@ -272,7 +276,7 @@ func (c *Client) GetPR(owner, repo, head string) (*github.PullRequest, error) {
 
 	n := r.Issues[0].GetNumber()
 
-	pr, _, err := c.github.PullRequests.Get(context.Background(), owner, repo, n)
+	pr, _, err := c.v3.PullRequests.Get(context.Background(), owner, repo, n)
 
 	if pr != nil {
 		log.WithFields(log.Fields{
@@ -296,7 +300,7 @@ func (c *Client) CreatePR(owner, repo, head, base, title, body string, draft boo
 		"draft": draft,
 	}).Debug("Creating PR...")
 
-	pr, _, err := c.github.PullRequests.Create(context.Background(), owner, repo, &github.NewPullRequest{
+	pr, _, err := c.v3.PullRequests.Create(context.Background(), owner, repo, &github.NewPullRequest{
 		Title: &title,
 		Head:  &head,
 		Base:  &base,
@@ -320,11 +324,23 @@ func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draf
 	if err != nil {
 		return nil, err
 	}
-	if pr != nil {
-		return pr, nil
+	if pr == nil || pr.GetState() == "closed" {
+		pr, err = c.CreatePR(owner, repo, head, base, title, body, draft)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	return c.CreatePR(owner, repo, head, base, title, body, draft)
+	if !draft && pr.GetDraft() {
+		input := githubv4.MarkPullRequestReadyForReviewInput{
+			PullRequestID: pr.GetNodeID(),
+		}
+		err = c.v4.Mutate(context.Background(), nil, input, nil)
+		if err != nil {
+			return pr, err
+		}
+		pr.Draft = &draft
+	}
+	return pr, nil
 }
 
 func (c *Client) GetFile(owner, repo, path, ref string) (*github.RepositoryContent, error) {
@@ -335,7 +351,7 @@ func (c *Client) GetFile(owner, repo, path, ref string) (*github.RepositoryConte
 		"ref":   ref,
 	}).Debug("Searching for file...")
 
-	f, _, _, err := c.github.Repositories.GetContents(context.Background(), owner, repo, path, &github.RepositoryContentGetOptions{
+	f, _, _, err := c.v3.Repositories.GetContents(context.Background(), owner, repo, path, &github.RepositoryContentGetOptions{
 		Ref: ref,
 	})
 
@@ -365,7 +381,7 @@ func (c *Client) GetCheckRuns(owner, repo, ref string) ([]*github.CheckRun, erro
 	}
 	var runs []*github.CheckRun
 	for {
-		rs, r, err := c.github.Checks.ListCheckRunsForRef(context.Background(), owner, repo, ref, opt)
+		rs, r, err := c.v3.Checks.ListCheckRunsForRef(context.Background(), owner, repo, ref, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -478,7 +494,7 @@ func (c *Client) CreateWorkflowRun(owner, repo, file, ref string, inputs ...Work
 		is[i.Name] = i.Value
 	}
 
-	_, err := c.github.Actions.CreateWorkflowDispatchEventByFileName(context.Background(), owner, repo, file, github.CreateWorkflowDispatchEventRequest{
+	_, err := c.v3.Actions.CreateWorkflowDispatchEventByFileName(context.Background(), owner, repo, file, github.CreateWorkflowDispatchEventRequest{
 		Ref:    ref,
 		Inputs: is,
 	})
@@ -508,7 +524,7 @@ func (c *Client) GetWorkflowRun(owner, repo, branch, file string, completed bool
 	if completed {
 		opt.Status = "completed"
 	}
-	r, _, err := c.github.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, file, opt)
+	r, _, err := c.v3.Actions.ListWorkflowRunsByFileName(context.Background(), owner, repo, file, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -546,7 +562,7 @@ func (c *Client) GetWorkflowRunLogs(owner, repo string, id int64) (*WorkflowRunL
 		"id":    id,
 	}).Debug("Searching for workflow run logs...")
 
-	url, _, err := c.github.Actions.GetWorkflowRunLogs(context.Background(), owner, repo, id, true)
+	url, _, err := c.v3.Actions.GetWorkflowRunLogs(context.Background(), owner, repo, id, true)
 	if err != nil {
 		return nil, err
 	}
@@ -631,7 +647,7 @@ func (c *Client) GetRelease(owner, repo, tag string) (*github.RepositoryRelease,
 		"tag":   tag,
 	}).Debug("Searching for release...")
 
-	r, _, err := c.github.Repositories.GetReleaseByTag(context.Background(), owner, repo, tag)
+	r, _, err := c.v3.Repositories.GetReleaseByTag(context.Background(), owner, repo, tag)
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}
@@ -657,7 +673,7 @@ func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease b
 		"prerelease": prerelease,
 	}).Debug("Creating release...")
 
-	r, _, err := c.github.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
+	r, _, err := c.v3.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
 		TagName:    &tag,
 		Name:       &name,
 		Body:       &body,
@@ -693,7 +709,7 @@ func (c *Client) GetTag(owner, repo, tag string) (*github.Tag, error) {
 		"tag":   tag,
 	}).Debug("Searching for tag...")
 
-	r, _, err := c.github.Git.GetRef(context.Background(), owner, repo, fmt.Sprintf("tags/%s", tag))
+	r, _, err := c.v3.Git.GetRef(context.Background(), owner, repo, fmt.Sprintf("tags/%s", tag))
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			return nil, nil
@@ -701,7 +717,7 @@ func (c *Client) GetTag(owner, repo, tag string) (*github.Tag, error) {
 		return nil, err
 	}
 
-	t, _, err := c.github.Git.GetTag(context.Background(), owner, repo, r.Object.GetSHA())
+	t, _, err := c.v3.Git.GetTag(context.Background(), owner, repo, r.Object.GetSHA())
 	if err != nil && strings.Contains(err.Error(), "404") {
 		return nil, nil
 	}

@@ -48,3 +48,7 @@ func (k kubo) ChangelogBranch(version *util.Version) string {
 func (k kubo) ReleaseIssueTitle(version *util.Version) string {
 	return fmt.Sprintf("Release %s", strings.TrimSuffix(version.MajorMinorPatch()[1:], ".0"))
 }
+
+func (k kubo) ReleaseURL(version *util.Version) string {
+	return fmt.Sprintf("https://github.com/%s/%s/releases/tag/%s", k.Owner, k.Repo, version)
+}
