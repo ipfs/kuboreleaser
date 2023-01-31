@@ -244,6 +244,21 @@ func main() {
 						},
 					},
 					{
+						Name:  "publish-to-dockerhub",
+						Usage: "Publish the release to DockerHub",
+						Action: func(c *cli.Context) error {
+							github := c.App.Metadata["github"].(*github.Client)
+							version := c.App.Metadata["version"].(*util.Version)
+
+							action := &actions.PublishToDockerHub{
+								GitHub:  github,
+								Version: version,
+							}
+
+							return Execute(action, c)
+						},
+					},
+					{
 						Name:  "tag",
 						Usage: "Tag the release",
 						Action: func(c *cli.Context) error {

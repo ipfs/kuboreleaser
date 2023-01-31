@@ -492,15 +492,17 @@ func (c *Client) CreateWorkflowRun(owner, repo, file, ref string, inputs ...Work
 	return err
 }
 
-func (c *Client) GetWorkflowRun(owner, repo, file string, completed bool) (*github.WorkflowRun, error) {
+func (c *Client) GetWorkflowRun(owner, repo, branch, file string, completed bool) (*github.WorkflowRun, error) {
 	log.WithFields(log.Fields{
 		"owner":     owner,
 		"repo":      repo,
+		"branch":    branch,
 		"file":      file,
 		"completed": completed,
 	}).Debug("Searching for workflow run...")
 
 	opt := &github.ListWorkflowRunsOptions{
+		Branch:      branch,
 		ListOptions: github.ListOptions{PerPage: 1},
 	}
 	if completed {

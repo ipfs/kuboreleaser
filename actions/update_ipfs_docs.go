@@ -14,7 +14,7 @@ type UpdateIPFSDocs struct {
 }
 
 func (ctx UpdateIPFSDocs) Check() error {
-	return CheckWorkflowRun(ctx.GitHub, repos.IPFSDocs.Owner, repos.IPFSDocs.Repo, repos.IPFSDocs.WorkflowName, repos.IPFSDocs.WorkflowJobName, fmt.Sprintf(" %s\r\n", ctx.Version.String()))
+	return CheckWorkflowRun(ctx.GitHub, repos.IPFSDocs.Owner, repos.IPFSDocs.Repo, repos.IPFSDocs.DefaultBranch, repos.IPFSDocs.WorkflowName, repos.IPFSDocs.WorkflowJobName, fmt.Sprintf(" %s\r\n", ctx.Version.String()))
 }
 
 func (ctx UpdateIPFSDocs) Run() error {

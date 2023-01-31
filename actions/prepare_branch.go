@@ -3,11 +3,11 @@ package actions
 import (
 	"fmt"
 
+	gh "github.com/google/go-github/v48/github"
 	"github.com/ipfs/kuboreleaser/git"
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
-	gh "github.com/google/go-github/v48/github"
 )
 
 type PrepareBranch struct {

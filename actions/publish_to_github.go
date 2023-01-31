@@ -25,7 +25,7 @@ func (ctx PublishToGitHub) Check() error {
 		return fmt.Errorf("release not found (%w)", ErrIncomplete)
 	}
 
-	return CheckWorkflowRun(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.SyncReleaseAssetsWorkflowJobName, ctx.Version.String())
+	return CheckWorkflowRun(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.SyncReleaseAssetsWorkflowJobName, ctx.Version.String())
 }
 
 func (ctx PublishToGitHub) Run() error {

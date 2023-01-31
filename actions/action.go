@@ -60,8 +60,8 @@ func CheckPR(github *github.Client, owner, repo, head string, shouldBeMerged boo
 	return nil
 }
 
-func CheckWorkflowRun(github *github.Client, owner, repo, file, job, pattern string) error {
-	run, err := github.GetWorkflowRun(owner, repo, file, false)
+func CheckWorkflowRun(github *github.Client, owner, repo, branch, file, job, pattern string) error {
+	run, err := github.GetWorkflowRun(owner, repo, branch, file, false)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,8 @@ type kubo struct {
 	ReleaseBranch                    string
 	SyncReleaseAssetsWorkflowName    string
 	SyncReleaseAssetsWorkflowJobName string
+	DockerHubWorkflowName            string
+	DockerHubWorkflowJobName         string
 }
 
 var Kubo = kubo{
@@ -22,6 +24,8 @@ var Kubo = kubo{
 	ReleaseBranch:                    "release",
 	SyncReleaseAssetsWorkflowName:    "sync-release-assets.yml",
 	SyncReleaseAssetsWorkflowJobName: "sync-github-and-dist-ipfs-tech",
+	DockerHubWorkflowName:            "docker-image.yml",
+	DockerHubWorkflowJobName:         "push_to_registry",
 }
 
 func (k kubo) VersionReleaseBranch(version *util.Version) string {
