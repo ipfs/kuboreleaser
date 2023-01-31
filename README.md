@@ -28,3 +28,4 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 - [ ] retrieving check runs fails if the branch was deleted
 - [ ] link to the release in bifrost comms
 - [ ] link to the release issue in the PRs
+- [ ] do not check runs status if the PR is merged

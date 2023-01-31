@@ -156,6 +156,9 @@ Url: %s`, url)
 		if err != nil {
 			return err
 		}
+		if file == nil {
+			return fmt.Errorf("changelog not found")
+		}
 
 		content, err := base64.StdEncoding.DecodeString(*file.Content)
 		if err != nil {

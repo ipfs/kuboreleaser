@@ -380,6 +380,23 @@ func main() {
 							return Execute(action, c)
 						},
 					},
+					{
+						Name:  "prepare-next",
+						Usage: "Prepare the next release",
+						Action: func(c *cli.Context) error {
+							git := c.App.Metadata["git"].(*git.Client)
+							github := c.App.Metadata["github"].(*github.Client)
+							version := c.App.Metadata["version"].(*util.Version)
+
+							action := &actions.PrepareNext{
+								Git:     git,
+								GitHub:  github,
+								Version: version,
+							}
+
+							return Execute(action, c)
+						},
+					},
 				},
 			},
 		},

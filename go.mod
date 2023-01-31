@@ -3,7 +3,6 @@ module github.com/ipfs/kuboreleaser
 go 1.19
 
 require (
-	github.com/Masterminds/semver v1.5.0
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/google/go-github/v48 v48.2.0

@@ -50,10 +50,7 @@ func (ctx PrepareBranch) UpdateVersion(branch, source, currentVersionNumber, bas
 }
 
 func (ctx PrepareBranch) Run() error {
-	dev, err := ctx.Version.Dev()
-	if err != nil {
-		return err
-	}
+	dev := fmt.Sprintf("%s.0-dev", ctx.Version.NextMajorMinor())
 
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 	var source string

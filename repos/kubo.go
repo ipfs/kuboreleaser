@@ -2,6 +2,7 @@ package repos
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ipfs/kuboreleaser/util"
 )
@@ -40,6 +41,10 @@ func (k kubo) ReleaseMergeBranch(version *util.Version) string {
 	return fmt.Sprintf("merge-release-%s", version.MajorMinorPatch())
 }
 
+func (k kubo) ChangelogBranch(version *util.Version) string {
+	return fmt.Sprintf("changelog-%s", version.MajorMinorPatch())
+}
+
 func (k kubo) ReleaseIssueTitle(version *util.Version) string {
-	return fmt.Sprintf("Release %s", version.MajorMinorPatch()[1:])
+	return fmt.Sprintf("Release %s", strings.TrimSuffix(version.MajorMinorPatch()[1:], ".0"))
 }

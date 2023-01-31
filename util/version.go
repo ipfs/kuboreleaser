@@ -2,9 +2,9 @@ package util
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	sv "github.com/Masterminds/semver"
 	"golang.org/x/mod/semver"
 )
 
@@ -27,19 +27,6 @@ func (v Version) Prerelease() string {
 	return semver.Prerelease(v.Version)
 }
 
-func (v Version) Dev() (string, error) {
-	newVersion, err := sv.NewVersion(v.Version)
-	if err != nil {
-		return "", err
-	}
-	nextVersion := newVersion.IncMinor()
-	devVersion, err := nextVersion.SetPrerelease("dev")
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("v%s", devVersion.String()), nil
-}
-
 func (v Version) IsPrerelease() bool {
 	return v.Prerelease() != ""
 }
@@ -56,6 +43,19 @@ func (v Version) Patch() string {
 	return strings.TrimPrefix(v.MajorMinorPatch(), v.MajorMinor())[1:]
 }
 
+func (v Version) Minor() string {
+	return strings.TrimPrefix(v.MajorMinor(), v.Major())[1:]
+}
+
+func (v Version) Major() string {
+	return semver.Major(v.Version)
+}
+
 func (v Version) IsPatch() bool {
 	return v.Patch() != "0"
+}
+
+func (v Version) NextMajorMinor() string {
+	minor, _ := strconv.Atoi(v.Minor())
+	return fmt.Sprintf("%s.%d", v.Major(), minor+1)
 }
