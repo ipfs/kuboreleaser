@@ -103,9 +103,7 @@ func (ctx Promote) Run() error {
 		return err
 	}
 
-	var confirmation string
-	fmt.Printf(`
-IPFS Discourse does not have API access enabled.
+	prompt := fmt.Sprintf(`IPFS Discourse does not have API access enabled.
 
 Please go to https://discuss.ipfs.io and create a new topic with the following content:
 Title: %s
@@ -113,35 +111,21 @@ Category: News
 Tags: kubo, go-ipfs
 Body: %s
 
-Remember to pin the topic globally!
-
-Once you have created and pinned the topic, please enter 'yes' to confirm.
-Only 'yes' will be accepted to approve.
-
-Enter a value: `, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
-	fmt.Scanln(&confirmation)
-	if confirmation != "yes" {
-		return fmt.Errorf("confirmation is not 'yes'")
+Remember to pin the topic globally!`, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
+	if !util.Confirm(prompt) {
+		return fmt.Errorf("discourse post not created")
 	}
 
 	if !ctx.Version.IsPrerelease() && !ctx.Version.IsPatch() {
 		url := fmt.Sprintf("https://github.com/ipfs/kubo/releases/tag/%s", ctx.Version)
 
-		var confirmation string
-		fmt.Printf(`
-Reddit supports only OAuth2 authentication.
+		prompt := fmt.Sprintf(`Reddit supports only OAuth2 authentication.
 
 Please go to https://www.reddit.com/r/ipfs/new/ and create a new "Link" post with the following content:
 
-Url: %s
-
-Once you have created the post or if the post already exist, please enter 'yes' to confirm.
-Only 'yes' will be accepted to approve.
-
-Enter a value: `, url)
-		fmt.Scanln(&confirmation)
-		if confirmation != "yes" {
-			return fmt.Errorf("confirmation is not 'yes'")
+Url: %s`, url)
+		if !util.Confirm(prompt) {
+			return fmt.Errorf("reddit post not created")
 		}
 
 		file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, "docs/changelogs/"+ctx.Version.MajorMinor()+".md", "release")
@@ -161,22 +145,15 @@ Enter a value: `, url)
 			}
 		}
 
-		fmt.Printf(`
-We do not have direct access to the IPFS Twitter account.
+		prompt = fmt.Sprintf(`We do not have direct access to the IPFS Twitter account.
 
 Please go to https://filecoinproject.slack.com/archives/C018EJ8LWH1 (#shared-pl-marketing-requests in FIL Slack) and ask the team to create a new tweet with the following content:
 
 What's happening?: #Kubo %s was just released!
 %s
-%s
-
-Once you have asked the team to create the tweet, please enter 'yes' to confirm.
-Only 'yes' will be accepted to approve.
-
-Enter a value: `, ctx.Version, strings.Join(highlights, "\n"), url)
-		fmt.Scanln(&confirmation)
-		if confirmation != "yes" {
-			return fmt.Errorf("confirmation is not 'yes'")
+%s`, ctx.Version, strings.Join(highlights, "\n"), url)
+		if !util.Confirm(prompt) {
+			return fmt.Errorf("twitter post not created")
 		}
 	}
 

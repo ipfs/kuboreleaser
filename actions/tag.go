@@ -51,21 +51,14 @@ func (ctx Tag) Run() error {
 			return err
 		}
 
-		var confirmation string
-
-		fmt.Printf(`
-Tag created:
+		prompt := fmt.Sprintf(`Tag created:
 %v
 
 Signature: %s
 
-The tag will now be pushed to the remote repository.
-Only 'yes' will be accepted to approve.
-
-Enter a value: `, ref, ref.PGPSignature)
-		fmt.Scanln(&confirmation)
-		if confirmation != "yes" {
-			return fmt.Errorf("confirmation is not 'yes'")
+The tag will now be pushed to the remote repository.`, ref, ref.PGPSignature)
+		if !util.Confirm(prompt) {
+			return fmt.Errorf("tag creation aborted")
 		}
 
 		return c.PushTag(ctx.Version.String())
