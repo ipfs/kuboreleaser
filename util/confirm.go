@@ -1,6 +1,10 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/go-github/v48/github"
+)
 
 func Confirm(prompt string) bool {
 	var confirmation string
@@ -11,4 +15,11 @@ Only 'yes' will be accepted to approve.
 Enter a value: `, prompt)
 	fmt.Scanln(&confirmation)
 	return confirmation == "yes"
+}
+
+func ConfirmPR(pr *github.PullRequest) bool {
+	prompt := fmt.Sprintf(`Go to %s, ensure the CI checks pass, and merge the PR.
+
+Please approve once the PR is merged.`, pr.GetHTMLURL())
+	return Confirm(prompt)
 }

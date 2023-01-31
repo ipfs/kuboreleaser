@@ -52,6 +52,12 @@ func (ctx UpdateIPFSBlog) Run() error {
 		return err
 	}
 
-	_, err = ctx.GitHub.GetOrCreatePR(repos.IPFSBlog.Owner, repos.IPFSBlog.Repo, branch, repos.IPFSBlog.DefaultBranch, title, body, false)
-	return err
+	pr, err := ctx.GitHub.GetOrCreatePR(repos.IPFSBlog.Owner, repos.IPFSBlog.Repo, branch, repos.IPFSBlog.DefaultBranch, title, body, false)
+	if err != nil {
+		return err
+	}
+	if !util.ConfirmPR(pr) {
+		return fmt.Errorf("pr not merged")
+	}
+	return nil
 }

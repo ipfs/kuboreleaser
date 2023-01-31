@@ -91,10 +91,7 @@ Please approve after the changelog is updated.`, branch, repos.Kubo.Owner, repos
 			return fmt.Errorf("updating the changelog was not confirmed")
 		}
 
-		prompt = fmt.Sprintf(`Go to %s, ensure the CI checks pass, and merge the PR.
-
-Please approve once the PR is merged.`, pr.GetHTMLURL())
-		if !util.Confirm(prompt) {
+		if !util.ConfirmPR(pr) {
 			return fmt.Errorf("pr not merged")
 		}
 	}
@@ -112,10 +109,7 @@ Please approve once the PR is merged.`, pr.GetHTMLURL())
 		if err != nil {
 			return err
 		}
-		prompt = fmt.Sprintf(`Go to %s, ensure the CI checks pass, and merge the PR.
-
-Please approve once the PR is merged.`, pr.GetHTMLURL())
-		if !util.Confirm(prompt) {
+		if !util.ConfirmPR(pr) {
 			return fmt.Errorf("pr not merged")
 		}
 	}

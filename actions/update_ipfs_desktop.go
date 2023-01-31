@@ -35,6 +35,14 @@ func (ctx UpdateIPFSDesktop) Run() error {
 		return err
 	}
 
-	_, err = ctx.GitHub.GetOrCreatePR(repos.IPFSDesktop.Owner, repos.IPFSDesktop.Repo, branch, repos.IPFSDesktop.DefaultBranch, title, body, false)
-	return err
+	pr, err := ctx.GitHub.GetOrCreatePR(repos.IPFSDesktop.Owner, repos.IPFSDesktop.Repo, branch, repos.IPFSDesktop.DefaultBranch, title, body, ctx.Version.IsPrerelease())
+	if err != nil {
+		return err
+	}
+	if !ctx.Version.IsPrerelease() {
+		if !util.ConfirmPR(pr) {
+			return fmt.Errorf("pr not merged")
+		}
+	}
+	return nil
 }

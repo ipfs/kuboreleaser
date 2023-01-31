@@ -121,10 +121,7 @@ func (ctx PrepareNext) Run() error {
 		return err
 	}
 
-	prompt := fmt.Sprintf(`Go to %s, ensure the CI checks pass, and merge the PR.
-
-Please approve once the PR is merged.`, pr.GetHTMLURL())
-	if !util.Confirm(prompt) {
+	if !util.ConfirmPR(pr) {
 		return fmt.Errorf("pr not merged")
 	}
 

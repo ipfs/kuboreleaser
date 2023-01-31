@@ -27,6 +27,13 @@ func (ctx MergeBranch) Run() error {
 		return err
 	}
 
-	_, err = ctx.GitHub.GetOrCreatePR(repos.Kubo.Owner, repos.Kubo.Repo, branch, repos.Kubo.DefaultBranch, title, body, false)
-	return err
+	pr, err := ctx.GitHub.GetOrCreatePR(repos.Kubo.Owner, repos.Kubo.Repo, branch, repos.Kubo.DefaultBranch, title, body, false)
+	if err != nil {
+		return err
+	}
+	if !util.ConfirmPR(pr) {
+		return fmt.Errorf("pr not merged")
+	}
+
+	return nil
 }

@@ -35,6 +35,12 @@ func (ctx UpdateInterop) Run() error {
 		return err
 	}
 
-	_, err = ctx.GitHub.GetOrCreatePR(repos.Interop.Owner, repos.Interop.Repo, branch, repos.Interop.DefaultBranch, title, body, false)
-	return err
+	pr, err := ctx.GitHub.GetOrCreatePR(repos.Interop.Owner, repos.Interop.Repo, branch, repos.Interop.DefaultBranch, title, body, false)
+	if err != nil {
+		return err
+	}
+	if !util.ConfirmPR(pr) {
+		return fmt.Errorf("pr not merged")
+	}
+	return nil
 }
