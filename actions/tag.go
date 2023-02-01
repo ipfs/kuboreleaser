@@ -56,7 +56,7 @@ func (ctx Tag) Run() error {
 
 Signature: %s
 
-The tag will now be pushed to the remote repository.`, ref, ref.PGPSignature)
+Please approve if the tag is correct. When you do, the tag will be pushed to the remote repository.`, ref, ref.PGPSignature)
 		if !util.Confirm(prompt) {
 			return fmt.Errorf("tag creation aborted")
 		}

@@ -25,7 +25,7 @@ func (ctx UpdateIPFSBlog) Run() error {
 	branch := repos.IPFSBlog.KuboBranch(ctx.Version)
 	title := fmt.Sprintf("Update Kubo: %s", ctx.Version)
 	body := fmt.Sprintf("This PR updates Kubo to %s", ctx.Version)
-	command := git.Command{Name: "yq", Args: []string{
+	command := util.Command{Name: "yq", Args: []string{
 		"ea",
 		"-i",
 		"-I", "0",

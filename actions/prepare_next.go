@@ -76,7 +76,7 @@ func (ctx PrepareNext) Run() error {
 		return err
 	}
 
-	createChangelog := git.Command{
+	createChangelog := util.Command{
 		Name: "bash",
 		Args: []string{"-c", fmt.Sprintf(`
 			if [ ! -f docs/changelogs/%s.md ]; then
@@ -103,7 +103,7 @@ func (ctx PrepareNext) Run() error {
 			fi
 		`, next.MajorMinor(), next.MajorMinor(), next.MajorMinor(), next.MajorMinor(), fmt.Sprintf("%s%s", next.Major(), next.Minor()), next.MajorMinor())},
 	}
-	linkChangelog := git.Command{
+	linkChangelog := util.Command{
 		Name: "bash",
 		Args: []string{"-c", fmt.Sprintf(`
 			if ! grep -q %s CHANGELOG.md; then

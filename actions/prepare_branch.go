@@ -1,7 +1,9 @@
 package actions
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 
 	gh "github.com/google/go-github/v48/github"
 	"github.com/ipfs/kuboreleaser/git"
@@ -35,13 +37,104 @@ func (ctx PrepareBranch) Check() error {
 	return nil
 }
 
+func (ctx PrepareBranch) MkReleaseLog() error {
+	placeholder := []byte("### 📝 Changelog\n\n### 👨‍👩‍👧‍👦 Contributors\n")
+	rootname := "/root/go/src"
+	dirname := fmt.Sprintf("%s/github.com/%s/%s", rootname, repos.Kubo.Owner, repos.Kubo.Repo)
+	filename := fmt.Sprintf("docs/changelogs/%s.md", ctx.Version.MajorMinor())
+	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
+
+	err := os.Mkdir(rootname, 0755)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(rootname)
+
+	cmd := util.Command{
+		Name: "git",
+		Args: []string{"clone", "https://github.com/ipfs/kubo", dirname},
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	changelog, err := os.ReadFile(fmt.Sprintf("%s/%s", dirname, filename))
+	if err != nil {
+		return err
+	}
+	if !bytes.Contains(changelog, placeholder) {
+		return nil
+	}
+
+	cmd = util.Command{
+		Name: "git",
+		Args: []string{"checkout", branch},
+		Dir:  dirname,
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	out := &bytes.Buffer{}
+	cmd = util.Command{
+		Name: "./mkreleaselog",
+		Dir:  dirname,
+		Stdout: util.Stdout{
+			Writer: out,
+		},
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(fmt.Sprintf("/root/go/src/github.com/ipfs/kubo/%s", filename), bytes.Replace(changelog, placeholder, out.Bytes(), 1), 0644)
+	if err != nil {
+		return err
+	}
+
+	cmd = util.Command{
+		Name: "git",
+		Args: []string{"add", filename},
+		Dir:  dirname,
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	cmd = util.Command{
+		Name: "git",
+		Args: []string{"commit", "-m", fmt.Sprintf("chore: update changelog for %s", ctx.Version.MajorMinor())},
+		Dir:  dirname,
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	cmd = util.Command{
+		Name: "git",
+		Args: []string{"push", "origin", branch},
+		Dir:  dirname,
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ctx PrepareBranch) UpdateVersion(branch, source, currentVersionNumber, base, title, body string, draft bool) (*gh.PullRequest, error) {
 	b, err := ctx.GitHub.GetOrCreateBranch(repos.Kubo.Owner, repos.Kubo.Repo, branch, source)
 	if err != nil {
 		return nil, err
 	}
 
-	err = ctx.Git.RunAndPush(repos.Kubo.Owner, repos.Kubo.Repo, branch, b.GetCommit().GetSHA(), "chore: update version", git.Command{Name: "sed", Args: []string{"-i", fmt.Sprintf("s/const CurrentVersionNumber = \".*\"/const CurrentVersionNumber = \"%s\"/g", currentVersionNumber), "version.go"}})
+	err = ctx.Git.RunAndPush(repos.Kubo.Owner, repos.Kubo.Repo, branch, b.GetCommit().GetSHA(), "chore: update version", util.Command{Name: "sed", Args: []string{"-i", fmt.Sprintf("s/const CurrentVersionNumber = \".*\"/const CurrentVersionNumber = \"%s\"/g", currentVersionNumber), "version.go"}})
 	if err != nil {
 		return nil, err
 	}
@@ -80,15 +173,9 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 	}
 
 	if !ctx.Version.IsPrerelease() {
-		prompt := fmt.Sprintf(`Check out the %s branch of %s/%s repository and run the following command:
-
-./bin/mkreleaselog 2>/dev/null
-
-Now copy the stdout and update the Changelog and Contributors sections of the changelog file (https://github.com/%s/%s/blob/%s/docs/changelogs/%s.md).
-
-Please approve after the changelog is updated.`, branch, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.Owner, repos.Kubo.Repo, branch, ctx.Version.MajorMinor())
-		if !util.Confirm(prompt) {
-			return fmt.Errorf("updating the changelog was not confirmed")
+		err := ctx.MkReleaseLog()
+		if err != nil {
+			return err
 		}
 
 		if !util.ConfirmPR(pr) {

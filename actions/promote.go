@@ -126,7 +126,9 @@ Category: News
 Tags: kubo, go-ipfs
 Body: %s
 
-Remember to pin the topic globally!`, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
+Remember to pin the topic globally!
+
+Please approve once the post is up.`, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
 	if !util.Confirm(prompt) {
 		return fmt.Errorf("discourse post not created")
 	}
@@ -135,7 +137,9 @@ Remember to pin the topic globally!`, ctx.getDiscoursePostTitle(), ctx.getDiscou
 		prompt := fmt.Sprintf(`Go to %s and add the link to the IPFS Discourse post to the top of the release notes.
 
 Use the following template:
-- 💬 [Discuss](https://discuss.ipfs.io/t/kubo-%s-is-out/XXXX)`, url, strings.ReplaceAll(ctx.Version.String(), ".", "-"))
+- 💬 [Discuss](https://discuss.ipfs.io/t/kubo-%s-is-out/XXXX)
+
+Please approve once the post is linked.`, url, strings.ReplaceAll(ctx.Version.String(), ".", "-"))
 
 		if !util.Confirm(prompt) {
 			return fmt.Errorf("discourse post not added to release notes")
@@ -147,7 +151,9 @@ Use the following template:
 
 Please go to https://www.reddit.com/r/ipfs/new/ and create a new "Link" post with the following content:
 
-Url: %s`, url)
+Url: %s
+
+Please approve once the post is up.`, url)
 		if !util.Confirm(prompt) {
 			return fmt.Errorf("reddit post not created")
 		}
@@ -178,7 +184,9 @@ Please go to https://filecoinproject.slack.com/archives/C018EJ8LWH1 (#shared-pl-
 
 What's happening?: #Kubo %s was just released!
 %s
-%s`, ctx.Version, strings.Join(highlights, "\n"), url)
+%s
+
+Please approve once the message is up.`, ctx.Version, strings.Join(highlights, "\n"), url)
 		if !util.Confirm(prompt) {
 			return fmt.Errorf("twitter post not created")
 		}

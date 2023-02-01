@@ -10,7 +10,6 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 - [ ] assign reviewers to the created PRs
 - [ ] check how git-go performs fetch (does it use protocol.version 2?)
 - [ ] add a `--dry-run` flag
-- [ ] automate changelog update (mkreleaselog; might require git in docker)
 - [ ] link to the release issue in the PRs
 - [ ] allow to specify args via env vars
 - [ ] remove one level of nesting from the CLI

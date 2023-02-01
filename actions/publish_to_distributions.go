@@ -34,7 +34,7 @@ func (ctx PublishToDistributions) Run() error {
 		return err
 	}
 
-	err = ctx.Git.RunAndPush(repos.Distributions.Owner, repos.Distributions.Repo, branch, b.GetCommit().GetSHA(), "chore: add Kubo release", git.Command{Name: "./dist.sh", Args: []string{"add-version", "kubo", ctx.Version.Version}})
+	err = ctx.Git.RunAndPush(repos.Distributions.Owner, repos.Distributions.Repo, branch, b.GetCommit().GetSHA(), "chore: add Kubo release", util.Command{Name: "./dist.sh", Args: []string{"add-version", "kubo", ctx.Version.Version}})
 	if err != nil {
 		return err
 	}

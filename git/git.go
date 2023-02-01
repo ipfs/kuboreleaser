@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"os/exec"
 	"time"
 
+	"github.com/ipfs/kuboreleaser/util"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -257,24 +257,6 @@ func (c *Clone) PushTag(tag string) error {
 	return c.Push(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
 }
 
-type Command struct {
-	Name string
-	Args []string
-}
-
-func (c *Command) Run(dir string) error {
-	log.WithFields(log.Fields{
-		"command": c.Name,
-		"args":    c.Args,
-	}).Debug("Running command...")
-
-	cmd := exec.Command(c.Name, c.Args...)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
 func (c *Client) WithClone(owner, repo, branch, sha string, fn func(*Clone) error) error {
 	dir, err := os.MkdirTemp("", "kuboreleaser")
 	if err != nil {
@@ -290,10 +272,11 @@ func (c *Client) WithClone(owner, repo, branch, sha string, fn func(*Clone) erro
 	return fn(r)
 }
 
-func (c *Client) RunAndPush(owner, repo, branch, sha, message string, commands ...Command) error {
+func (c *Client) RunAndPush(owner, repo, branch, sha, message string, commands ...util.Command) error {
 	return c.WithClone(owner, repo, branch, sha, func(r *Clone) error {
 		for _, command := range commands {
-			err := command.Run(r.dir)
+			command.Dir = r.dir
+			err := command.Run()
 			if err != nil {
 				return err
 			}

@@ -16,7 +16,14 @@ RUN apk update && apk add --no-cache \
   zsh \
   npm \
   diffutils \
-  yq
+  yq \
+  go \
+  git \
+  jq
+
+RUN git config --global gc.auto 0
+RUN git config --global protocol.version 2
+RUN git config --global core.sshCommand ""
 
 COPY --from=builder /src/kuboreleaser /usr/bin/kuboreleaser
 
