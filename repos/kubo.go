@@ -26,7 +26,7 @@ var Kubo = kubo{
 	SyncReleaseAssetsWorkflowName:    "sync-release-assets.yml",
 	SyncReleaseAssetsWorkflowJobName: "sync-github-and-dist-ipfs-tech",
 	DockerHubWorkflowName:            "docker-image.yml",
-	DockerHubWorkflowJobName:         "push_to_registry",
+	DockerHubWorkflowJobName:         "Push Docker image to Docker Hub",
 }
 
 func (k kubo) VersionReleaseBranch(version *util.Version) string {

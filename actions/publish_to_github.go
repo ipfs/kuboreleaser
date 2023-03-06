@@ -31,7 +31,7 @@ func (ctx PublishToGitHub) Check() error {
 func (ctx PublishToGitHub) Run() error {
 	var body string
 	if ctx.Version.IsPrerelease() {
-		body = fmt.Sprintf("Changelog: [docs/changelogs/%s.md](https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md)", ctx.Version.MajorMinor(), ctx.Version.MajorMinor(), ctx.Version.MajorMinor())
+		body = fmt.Sprintf("Changelog: [docs/changelogs/%s.md](https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md)", ctx.Version.MajorMinor(), ctx.Version.MajorMinorPatch(), ctx.Version.MajorMinor())
 	} else {
 		file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, fmt.Sprintf("docs/changelogs/%s.md", ctx.Version.MajorMinor()), repos.Kubo.ReleaseBranch)
 		if err != nil {
