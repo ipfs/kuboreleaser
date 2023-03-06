@@ -35,16 +35,16 @@ func (ctx *Promote) getReleaseIssueComment() string {
 	if ctx.Version.IsPrerelease() {
 		return fmt.Sprintf(`Early testers ping for %s testing 😄.
 
-- [ ] pacman.store (@RubenKelevra)
-- [ ] Infura (@MichaelMure)
-- [ ] Textile (@sanderpick)
-- [ ] Pinata (@obo20)
-- [ ] RTrade (@postables)
-- [ ] QRI (@b5)
-- [ ] Siderus (@koalalorenzo)
 - [ ] Charity Engine (@rytiss, @tristanolive)
 - [ ] Fission (@bmann)
+- [ ] Infura (@MichaelMure)
 - [ ] OrbitDB (@aphelionz)
+- [ ] pacman.store (@RubenKelevra)
+- [ ] Pinata (@obo20)
+- [ ] PL EngRes bifrost (@gmasgras)
+- [ ] RTrade (@postables)
+- [ ] Siderus (@koalalorenzo)
+- [ ] Textile (@sanderpick)
 
 You're getting this message because you're listed [here](https://github.com/ipfs/kubo/blob/master/docs/EARLY_TESTERS.md#who-has-signed-up). Please update this list if you no longer want to be included.`, ctx.Version)
 	} else {

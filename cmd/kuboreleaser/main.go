@@ -156,30 +156,6 @@ func main() {
 						},
 					},
 					{
-						Name:  "notify-bifrost",
-						Usage: "Notify Bifrost of the new release",
-						Flags: []cli.Flag{
-							&cli.TimestampFlag{
-								Name:    "date",
-								Aliases: []string{"d"},
-								Usage:   "Date of the release",
-								Layout:  "2006-01-02",
-							},
-						},
-						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
-							version := c.App.Metadata["version"].(*util.Version)
-
-							action := &actions.NotifyBifrost{
-								GitHub:  github,
-								Version: version,
-								Date:    c.Timestamp("date"),
-							}
-
-							return Execute(action, c)
-						},
-					},
-					{
 						Name:  "promote",
 						Usage: "Promote the release",
 						Action: func(c *cli.Context) error {
