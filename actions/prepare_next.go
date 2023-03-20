@@ -9,6 +9,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type PrepareNext struct {
@@ -23,6 +24,9 @@ func (ctx PrepareNext) getNextVersion() *util.Version {
 }
 
 func (ctx PrepareNext) Check() error {
+	log.Info("I'm going to check if the PR that creates the next changelog exists and if it's merged already.")
+	log.Info("I'm also going to check if the next release issue exists already.")
+
 	next := ctx.getNextVersion()
 	branch := repos.Kubo.ChangelogBranch(next)
 	title := repos.Kubo.ReleaseIssueTitle(next)
@@ -32,7 +36,7 @@ func (ctx PrepareNext) Check() error {
 		return err
 	}
 	if issue == nil {
-		return fmt.Errorf("issue %s not found (%w)", title, ErrIncomplete)
+		return fmt.Errorf("issue '%s' not found in https://github.com/%s/%s/issues (%w)", title, repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
 	}
 
 	err = CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, branch, true)
@@ -44,12 +48,15 @@ func (ctx PrepareNext) Check() error {
 }
 
 func (ctx PrepareNext) Run() error {
+	log.Info("I'm going to create a PR that creates the next changelog and ask you to merge it for me.")
+	log.Info("I'm also going to create the next release issue.")
+
 	file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, "docs/RELEASE_ISSUE_TEMPLATE.md", repos.Kubo.DefaultBranch)
 	if err != nil {
 		return err
 	}
 	if file == nil {
-		return fmt.Errorf("release issue template not found")
+		return fmt.Errorf("https://github.com/%s/%s/tree/%s/docs/RELEASE_ISSUE_TEMPLATE.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch)
 	}
 
 	content, err := base64.StdEncoding.DecodeString(*file.Content)
@@ -122,7 +129,7 @@ func (ctx PrepareNext) Run() error {
 	}
 
 	if !util.ConfirmPR(pr) {
-		return fmt.Errorf("pr not merged")
+		return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 	}
 
 	return nil

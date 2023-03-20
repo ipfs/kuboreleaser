@@ -7,6 +7,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type PublishToDistributions struct {
@@ -16,6 +17,8 @@ type PublishToDistributions struct {
 }
 
 func (ctx PublishToDistributions) Check() error {
+	log.Info("I'm going to check if the PR that publishes the release to distributions exists and if it's merged already.")
+
 	err := CheckPR(ctx.GitHub, repos.Distributions.Owner, repos.Distributions.Repo, repos.Distributions.KuboBranch(ctx.Version), true)
 	if err != nil {
 		return err
@@ -25,6 +28,8 @@ func (ctx PublishToDistributions) Check() error {
 }
 
 func (ctx PublishToDistributions) Run() error {
+	log.Info("I'm going to create a PR that publishes the release to distributions and ask you to merge it for me.")
+
 	branch := repos.Distributions.KuboBranch(ctx.Version)
 	title := fmt.Sprintf("Publish Kubo: %s", ctx.Version)
 	body := fmt.Sprintf("This PR initiates publishing of Kubo %s", ctx.Version)
@@ -44,7 +49,7 @@ func (ctx PublishToDistributions) Run() error {
 		return err
 	}
 	if !util.ConfirmPR(pr) {
-		return fmt.Errorf("pr not merged")
+		return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 	}
 	return nil
 }

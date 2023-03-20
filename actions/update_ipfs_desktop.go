@@ -7,6 +7,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type UpdateIPFSDesktop struct {
@@ -16,10 +17,14 @@ type UpdateIPFSDesktop struct {
 }
 
 func (ctx UpdateIPFSDesktop) Check() error {
-	return CheckPR(ctx.GitHub, repos.IPFSDesktop.Owner, repos.IPFSDesktop.Repo, repos.IPFSDesktop.KuboBranch(ctx.Version), !ctx.Version.IsPrerelease())
+	log.Info("I'm going to check if the PR that updates Kubo in IPFS Desktop has been created already.")
+
+	return CheckPR(ctx.GitHub, repos.IPFSDesktop.Owner, repos.IPFSDesktop.Repo, repos.IPFSDesktop.KuboBranch(ctx.Version), false)
 }
 
 func (ctx UpdateIPFSDesktop) Run() error {
+	log.Info("I'm going to create a PR that updates Kubo in IPFS Desktop.")
+
 	branch := repos.IPFSDesktop.KuboBranch(ctx.Version)
 	title := fmt.Sprintf("Update Kubo: %s", ctx.Version)
 	body := fmt.Sprintf("This PR updates Kubo to %s", ctx.Version)
@@ -35,14 +40,6 @@ func (ctx UpdateIPFSDesktop) Run() error {
 		return err
 	}
 
-	pr, err := ctx.GitHub.GetOrCreatePR(repos.IPFSDesktop.Owner, repos.IPFSDesktop.Repo, branch, repos.IPFSDesktop.DefaultBranch, title, body, ctx.Version.IsPrerelease())
-	if err != nil {
-		return err
-	}
-	if !ctx.Version.IsPrerelease() {
-		if !util.ConfirmPR(pr) {
-			return fmt.Errorf("pr not merged")
-		}
-	}
-	return nil
+	_, err = ctx.GitHub.GetOrCreatePR(repos.IPFSDesktop.Owner, repos.IPFSDesktop.Repo, branch, repos.IPFSDesktop.DefaultBranch, title, body, ctx.Version.IsPrerelease())
+	return err
 }

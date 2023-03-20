@@ -7,6 +7,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type Tag struct {
@@ -24,23 +25,27 @@ func (ctx Tag) getBranch() string {
 }
 
 func (ctx Tag) Check() error {
+	log.Info("I'm going to check if the signed tag for the release already exists.")
+
 	tag, err := ctx.GitHub.GetTag(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String())
 	if err != nil {
 		return err
 	}
 	if tag == nil {
-		return fmt.Errorf("tag %s does not exist (%w)", ctx.Version.String(), ErrIncomplete)
+		return fmt.Errorf("https://github.com/%s/%s/tags/%s does not exist (%w)", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ErrIncomplete)
 	}
 	return nil
 }
 
 func (ctx Tag) Run() error {
+	log.Info("I'm going to create a signed tag for the release.")
+
 	branch, err := ctx.GitHub.GetBranch(repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
 	if err != nil {
 		return err
 	}
 	if branch == nil {
-		return fmt.Errorf("branch %s does not exist", ctx.getBranch())
+		return fmt.Errorf("https://github.com/%s/%s/blob/%s does not exist", repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
 	}
 
 	sha := branch.GetCommit().GetSHA()
@@ -58,7 +63,7 @@ Signature: %s
 
 Please approve if the tag is correct. When you do, the tag will be pushed to the remote repository.`, ref, ref.PGPSignature)
 		if !util.Confirm(prompt) {
-			return fmt.Errorf("tag creation aborted")
+			return fmt.Errorf("creation of tag '%s' was not confirmed correctly", ctx.Version.String())
 		}
 
 		return c.PushTag(ctx.Version.String())

@@ -8,6 +8,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type UpdateIPFSBlog struct {
@@ -18,10 +19,14 @@ type UpdateIPFSBlog struct {
 }
 
 func (ctx UpdateIPFSBlog) Check() error {
+	log.Info("I'm going to check if the workflow that updates the IPFS Blog has run already.")
+
 	return CheckPR(ctx.GitHub, repos.IPFSBlog.Owner, repos.IPFSBlog.Repo, repos.IPFSBlog.KuboBranch(ctx.Version), !ctx.Version.IsPrerelease())
 }
 
 func (ctx UpdateIPFSBlog) Run() error {
+	log.Info("I'm going to create a PR that updates the IPFS Blog and ask you to merge it for me.")
+
 	branch := repos.IPFSBlog.KuboBranch(ctx.Version)
 	title := fmt.Sprintf("Update Kubo: %s", ctx.Version)
 	body := fmt.Sprintf("This PR updates Kubo to %s", ctx.Version)
@@ -57,7 +62,7 @@ func (ctx UpdateIPFSBlog) Run() error {
 		return err
 	}
 	if !util.ConfirmPR(pr) {
-		return fmt.Errorf("pr not merged")
+		return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 	}
 	return nil
 }

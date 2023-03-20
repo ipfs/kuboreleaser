@@ -10,6 +10,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type PrepareBranch struct {
@@ -19,6 +20,8 @@ type PrepareBranch struct {
 }
 
 func (ctx PrepareBranch) Check() error {
+	log.Info("I'm going to check if PRs that update versions in the release branch and the master branch exist and if they're merged already.")
+
 	versionReleaseBranch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 
 	err := CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, versionReleaseBranch, !ctx.Version.IsPrerelease())
@@ -44,7 +47,7 @@ func (ctx PrepareBranch) MkReleaseLog() error {
 	filename := fmt.Sprintf("docs/changelogs/%s.md", ctx.Version.MajorMinor())
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 
-	err := os.Mkdir(rootname, 0755)
+	err := os.MkdirAll(rootname, 0755)
 	if err != nil {
 		return err
 	}
@@ -79,7 +82,7 @@ func (ctx PrepareBranch) MkReleaseLog() error {
 
 	out := &bytes.Buffer{}
 	cmd = util.Command{
-		Name: "./mkreleaselog",
+		Name: "./bin/mkreleaselog",
 		Dir:  dirname,
 		Stdout: util.Stdout{
 			Writer: out,
@@ -139,10 +142,17 @@ func (ctx PrepareBranch) UpdateVersion(branch, source, currentVersionNumber, bas
 		return nil, err
 	}
 
-	return ctx.GitHub.GetOrCreatePR(repos.Kubo.Owner, repos.Kubo.Repo, branch, base, title, body, draft)
+	pr, err := ctx.GitHub.GetOrCreatePR(repos.Kubo.Owner, repos.Kubo.Repo, branch, base, title, body, draft)
+	if err != nil {
+		return nil, err
+	}
+	return pr, nil
 }
 
 func (ctx PrepareBranch) Run() error {
+	log.Info("I'm going to create a PRs that update the version in the release branch and the master branch.")
+	log.Info("I'm also going to update the changelog if we're performing the final release. Please note that it might take a while because I have to clone a looooot of repos.")
+
 	dev := fmt.Sprintf("%s.0-dev", ctx.Version.NextMajorMinor())
 
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
@@ -169,7 +179,7 @@ git cherry-pick -x <commit>
 
 Please approve after all the required commits are cherry-picked.`, branch, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch)
 	if !util.Confirm(prompt) {
-		return fmt.Errorf("cherry-picking commits from %s to %s was not confirmed", repos.Kubo.DefaultBranch, branch)
+		return fmt.Errorf("cherry-picking commits to https://github.com/%s/%s/tree/%s was not confirmed correctly", repos.Kubo.Owner, repos.Kubo.Repo, branch)
 	}
 
 	if !ctx.Version.IsPrerelease() {
@@ -179,7 +189,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 		}
 
 		if !util.ConfirmPR(pr) {
-			return fmt.Errorf("pr not merged")
+			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 		}
 	}
 
@@ -197,7 +207,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 			return err
 		}
 		if !util.ConfirmPR(pr) {
-			return fmt.Errorf("pr not merged")
+			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 		}
 	}
 

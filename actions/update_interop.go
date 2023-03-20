@@ -7,6 +7,7 @@ import (
 	"github.com/ipfs/kuboreleaser/github"
 	"github.com/ipfs/kuboreleaser/repos"
 	"github.com/ipfs/kuboreleaser/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type UpdateInterop struct {
@@ -16,10 +17,14 @@ type UpdateInterop struct {
 }
 
 func (ctx UpdateInterop) Check() error {
+	log.Info("I'm going to check if the PR that updates Kubo in interop has been merged already.")
+
 	return CheckPR(ctx.GitHub, repos.Interop.Owner, repos.Interop.Repo, repos.Interop.KuboBranch(ctx.Version), !ctx.Version.IsPrerelease())
 }
 
 func (ctx UpdateInterop) Run() error {
+	log.Info("I'm going to create a PR that updates Kubo in interop.")
+
 	branch := repos.Interop.KuboBranch(ctx.Version)
 	title := fmt.Sprintf("Update Kubo: %s", ctx.Version)
 	body := fmt.Sprintf("This PR updates Kubo to %s", ctx.Version)
@@ -40,7 +45,7 @@ func (ctx UpdateInterop) Run() error {
 		return err
 	}
 	if !util.ConfirmPR(pr) {
-		return fmt.Errorf("pr not merged")
+		return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 	}
 	return nil
 }

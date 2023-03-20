@@ -23,7 +23,8 @@ func Execute(action actions.IAction, c *cli.Context) error {
 			if !errors.Is(err, actions.ErrIncomplete) {
 				return err
 			} else {
-				log.Info("The action is not complete yet, continuing...", err)
+				log.Info("The action is not complete yet, continuing...")
+				log.Warn(err)
 			}
 		} else {
 			log.Info("Action already completed")
@@ -48,15 +49,15 @@ func Execute(action actions.IAction, c *cli.Context) error {
 		for {
 			log.Info("Sleeping for ", duration, "...")
 			time.Sleep(duration)
-			if duration < time.Minute*10 {
-				duration = duration * 2
-			}
+
+			duration = time.Minute * 1
 
 			log.Info("Checking the status of the action...")
 			err := action.Check()
 			if err != nil {
 				if errors.Is(err, actions.ErrInProgress) && !c.Bool("skip-wait") {
-					log.Info("The action is still in progress, continuing...", err)
+					log.Info("The action is still in progress, continuing...")
+					log.Warn(err)
 					continue
 				}
 				return err
@@ -92,7 +93,20 @@ func main() {
 				Name:    "skip-wait",
 				Aliases: []string{"sw"},
 				Usage:   "skip the wait for the command to complete after the run",
+			}, &cli.StringFlag{
+				Name:    "log-level",
+				Aliases: []string{"l"},
+				Usage:   "log level",
+				Value:   "info",
 			},
+		},
+		Before: func(c *cli.Context) error {
+			level, err := log.ParseLevel(c.String("log-level"))
+			if err != nil {
+				return err
+			}
+			log.SetLevel(level)
+			return nil
 		},
 		Commands: []*cli.Command{
 			{
@@ -383,7 +397,6 @@ func main() {
 		FullTimestamp:   true,
 	}
 	log.SetFormatter(formatter)
-	log.SetLevel(log.DebugLevel)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)

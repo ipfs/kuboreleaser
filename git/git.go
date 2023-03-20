@@ -35,11 +35,11 @@ func NewClient() (*Client, error) {
 	}
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf("env var GITHUB_TOKEN must be set")
+		return nil, fmt.Errorf("GITHUB_TOKEN not set")
 	}
 	key64 := os.Getenv("GPG_KEY")
 	if key64 == "" {
-		return nil, fmt.Errorf("env var GPG_KEY must be set")
+		return nil, fmt.Errorf("GPG_KEY not set")
 	}
 	pass := os.Getenv("GPG_PASSPHRASE")
 

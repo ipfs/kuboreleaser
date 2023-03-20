@@ -26,7 +26,7 @@ type Client struct {
 func NewClient() (*Client, error) {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf("env var GITHUB_TOKEN must be set")
+		return nil, fmt.Errorf("GITHUB_TOKEN not set")
 	}
 
 	sts := oauth2.StaticTokenSource(
@@ -265,7 +265,7 @@ func (c *Client) GetPR(owner, repo, head string) (*github.PullRequest, error) {
 
 	q := fmt.Sprintf("is:pr repo:%s/%s head:%s", owner, repo, head)
 	r, _, err := c.v3.Search.Issues(context.Background(), q, &github.SearchOptions{
-		ListOptions: github.ListOptions{PerPage: 1},
+		ListOptions: github.ListOptions{PerPage: 100},
 	})
 	if err != nil {
 		return nil, err
@@ -273,20 +273,24 @@ func (c *Client) GetPR(owner, repo, head string) (*github.PullRequest, error) {
 	if len(r.Issues) == 0 {
 		return nil, nil
 	}
-
-	n := r.Issues[0].GetNumber()
-
-	pr, _, err := c.v3.PullRequests.Get(context.Background(), owner, repo, n)
-
-	if pr != nil {
-		log.WithFields(log.Fields{
-			"url": pr.GetHTMLURL(),
-		}).Debug("Found PR")
-	} else {
-		log.Debug("PR not found")
+	for _, i := range r.Issues {
+		n := i.GetNumber()
+		pr, _, err := c.v3.PullRequests.Get(context.Background(), owner, repo, n)
+		if err != nil {
+			return nil, err
+		}
+		if pr != nil {
+			if pr.GetHead().GetRef() == head {
+				log.WithFields(log.Fields{
+					"url": pr.GetHTMLURL(),
+				}).Debug("Found PR")
+				return pr, nil
+			}
+		}
 	}
 
-	return pr, err
+	log.Debug("PR not found")
+	return nil, nil
 }
 
 func (c *Client) CreatePR(owner, repo, head, base, title, body string, draft bool) (*github.PullRequest, error) {
@@ -331,10 +335,17 @@ func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draf
 		}
 	}
 	if !draft && pr.GetDraft() {
+		var m struct {
+			MarkPullRequestReadyForReview struct {
+				PullRequest struct {
+					ID githubv4.ID
+				}
+			} `graphql:"markPullRequestReadyForReview(input: $input)"`
+		}
 		input := githubv4.MarkPullRequestReadyForReviewInput{
 			PullRequestID: pr.GetNodeID(),
 		}
-		err = c.v4.Mutate(context.Background(), nil, input, nil)
+		err = c.v4.Mutate(context.Background(), &m, input, nil)
 		if err != nil {
 			return pr, err
 		}
