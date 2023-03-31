@@ -4,6 +4,34 @@ KuboReleaser is a CLI tool intended to help with the automation of [the release 
 
 It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is now being extracted into its own repo.
 
+## Prerequisites
+
+- [ ] `docker` installed
+- [ ] GitHub token creted with the following scopes
+  - ...
+- [ ] GitHub GPG key created and added to the GitHub account
+- [ ] Matrix account created and added to the Kubo room
+
+## Usage
+
+1. Build the binary
+
+```bash
+make kubeleaser
+```
+
+2. Create the .env file with your credentials
+
+```bash
+make env
+```
+
+3. Run the CLI
+
+```bash
+./kubeleaser --help
+```
+
 ## TODO
 
 - [ ] enable auto-merge on created PRs
