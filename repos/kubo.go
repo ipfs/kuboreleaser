@@ -24,7 +24,7 @@ var Kubo = kubo{
 	DefaultBranch:                    "master",
 	ReleaseBranch:                    "release",
 	SyncReleaseAssetsWorkflowName:    "sync-release-assets.yml",
-	SyncReleaseAssetsWorkflowJobName: "sync-github-and-dist-ipfs-tech",
+	SyncReleaseAssetsWorkflowJobName: "dist-ipfs-tech",
 	DockerHubWorkflowName:            "docker-image.yml",
 	DockerHubWorkflowJobName:         "Push Docker image to Docker Hub",
 }

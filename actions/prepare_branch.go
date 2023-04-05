@@ -47,6 +47,19 @@ func (ctx PrepareBranch) MkReleaseLog() error {
 	filename := fmt.Sprintf("docs/changelogs/%s.md", ctx.Version.MajorMinor())
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 
+	name := os.Getenv("GITHUB_USER_NAME")
+	if name == "" {
+		name = "Kubo Releaser"
+	}
+	email := os.Getenv("GITHUB_USER_EMAIL")
+	if email == "" {
+		email = "noreply+kuboreleaser@ipfs.tech"
+	}
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return fmt.Errorf("GITHUB_TOKEN not set")
+	}
+
 	err := os.MkdirAll(rootname, 0755)
 	if err != nil {
 		return err
@@ -55,7 +68,27 @@ func (ctx PrepareBranch) MkReleaseLog() error {
 
 	cmd := util.Command{
 		Name: "git",
-		Args: []string{"clone", "https://github.com/ipfs/kubo", dirname},
+		Args: []string{"clone", fmt.Sprintf("https://%s@github.com/ipfs/kubo", token), dirname},
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	cmd = util.Command{
+		Name: "git",
+		Args: []string{"config", "user.name", name},
+		Dir:  dirname,
+	}
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	cmd = util.Command{
+		Name: "git",
+		Args: []string{"config", "user.email", email},
+		Dir:  dirname,
 	}
 	err = cmd.Run()
 	if err != nil {
@@ -158,7 +191,7 @@ func (ctx PrepareBranch) Run() error {
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 	var source string
 	if ctx.Version.IsPatch() {
-		source = repos.Kubo.ReleaseBranch
+		source = repos.Kubo.ReleaseBranch // TODO: this is not correct, we should use the previous patch release branch
 	} else {
 		source = repos.Kubo.DefaultBranch
 	}

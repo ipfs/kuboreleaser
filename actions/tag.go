@@ -20,7 +20,7 @@ func (ctx Tag) getBranch() string {
 	if ctx.Version.IsPrerelease() {
 		return repos.Kubo.VersionReleaseBranch(ctx.Version)
 	} else {
-		return repos.Kubo.ReleaseBranch
+		return repos.Kubo.ReleaseBranch // TODO: for patch releases, we should use the the version release branch because the release branch might be ahead already
 	}
 }
 

@@ -18,7 +18,7 @@ Enter a value: `, prompt)
 }
 
 func ConfirmPR(pr *github.PullRequest) bool {
-	prompt := fmt.Sprintf(`Go to %s, ensure the CI checks pass, and merge the PR.
+	prompt := fmt.Sprintf(`Go to %s, ensure the CI checks pass, and merge the PR. Use merge commit if possible.
 
 Please approve once the PR is merged.`, pr.GetHTMLURL())
 	return Confirm(prompt)
