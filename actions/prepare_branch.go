@@ -28,6 +28,7 @@ func (ctx PrepareBranch) Check() error {
 	if err != nil {
 		return err
 	}
+	// Should we check if the PR checks are passing?
 
 	if !ctx.Version.IsPatch() {
 		versionUpdateBranch := repos.Kubo.VersionUpdateBranch(ctx.Version)
@@ -205,6 +206,11 @@ func (ctx PrepareBranch) Run() error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf(`Your release PR is ready at %s\n`, pr.GetHTMLURL())
+
+	// TODO: check for conflicts and tell the user to resolve them
+	// or resolve them automatically with git merge origin/release -X ours
 
 	prompt := fmt.Sprintf(`If needed, check out the %s branch of %s/%s repository and cherry-pick commits from %s using the following command:
 
