@@ -42,39 +42,41 @@ if [[ -z "$github_user_email" ]]; then
   exit 1
 fi
 
-gpg_id="$GPG_ID"
-if [[ -z "$gpg_id" ]]; then
-  gpg_id="$(git config --global user.signingkey)"
-fi
-if [[ -z "$gpg_id" ]]; then
-  echo "Please provide a GPG ID. You can also configure it by following:"
-  echo "  https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key"
-  echo "GPG ID: "
-  read gpg_id
-fi
-if [[ -z "$gpg_id" ]]; then
-  echo "GPG ID is required"
-  exit 1
-fi
+if [[ -z "$NO_GPG" ]]; then
+  gpg_id="$GPG_ID"
+  if [[ -z "$gpg_id" ]]; then
+    gpg_id="$(git config --global user.signingkey)"
+  fi
+  if [[ -z "$gpg_id" ]]; then
+    echo "Please provide a GPG ID. You can also configure it by following:"
+    echo "  https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key"
+    echo "GPG ID: "
+    read gpg_id
+  fi
+  if [[ -z "$gpg_id" ]]; then
+    echo "GPG ID is required"
+    exit 1
+  fi
 
-gpg_passphrase="$GPG_PASSPHRASE"
-if [[ -z "$gpg_passphrase" ]]; then
-  echo "Please provide a GPG passphrase for the key $gpg_id."
-  echo "GPG passphrase: "
-  read -s gpg_passphrase
-fi
-if [[ -z "$gpg_passphrase" ]]; then
-  echo "GPG passphrase is required"
-  exit 1
-fi
+  gpg_passphrase="$GPG_PASSPHRASE"
+  if [[ -z "$gpg_passphrase" ]]; then
+    echo "Please provide a GPG passphrase for the key $gpg_id."
+    echo "GPG passphrase: "
+    read -s gpg_passphrase
+  fi
+  if [[ -z "$gpg_passphrase" ]]; then
+    echo "GPG passphrase is required"
+    exit 1
+  fi
 
-gpg_key="$GPG_KEY"
-if [[ -z "$gpg_key" ]]; then
-  gpg_key="$(gpg --armor --pinentry-mode=loopback --passphrase "$gpg_passphrase" --export-secret-key "$gpg_id" -w0 | base64 -w0)"
-fi
-if [[ -z "$gpg_key" ]]; then
-  echo "GPG key is required"
-  exit 1
+  gpg_key="$GPG_KEY"
+  if [[ -z "$gpg_key" ]]; then
+    gpg_key="$(gpg --armor --pinentry-mode=loopback --passphrase "$gpg_passphrase" --export-secret-key "$gpg_id" -w0 | base64 -w0)"
+  fi
+  if [[ -z "$gpg_key" ]]; then
+    echo "GPG key is required"
+    exit 1
+  fi
 fi
 
 matrix_user="$MATRIX_USER"
@@ -101,6 +103,7 @@ export GITHUB_TOKEN="$github_token"
 export GITHUB_USER_NAME="$github_user_name"
 export GITHUB_USER_EMAIL="$github_user_email"
 
+export NO_GPG="$NO_GPG"
 export GPG_ID="$gpg_id"
 export GPG_PASSPHRASE="$gpg_passphrase"
 export GPG_KEY="$gpg_key"

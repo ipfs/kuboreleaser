@@ -37,17 +37,27 @@ func NewClient() (*Client, error) {
 	if token == "" {
 		return nil, fmt.Errorf("GITHUB_TOKEN not set")
 	}
-	key64 := os.Getenv("GPG_KEY")
-	if key64 == "" {
-		return nil, fmt.Errorf("GPG_KEY not set")
-	}
-	pass := os.Getenv("GPG_PASSPHRASE")
 
 	// create HeaderAuth
 	auth, err := NewHeaderAuth(token)
 	if err != nil {
 		return nil, err
 	}
+
+	disabled := os.Getenv("NO_GPG")
+	if disabled != "" {
+		return &Client{
+			name:  name,
+			email: email,
+			auth:  auth,
+		}, nil
+	}
+
+	key64 := os.Getenv("GPG_KEY")
+	if key64 == "" {
+		return nil, fmt.Errorf("GPG_KEY not set")
+	}
+	pass := os.Getenv("GPG_PASSPHRASE")
 
 	// create OpenPGP Entity
 	key, err := base64.StdEncoding.DecodeString(key64)
@@ -212,12 +222,18 @@ func (c *Clone) Tag(ref, tag, message string) (*object.Tag, error) {
 		"tag": tag,
 	}).Debug("Tagging...")
 
-	log.Debug("Creating tag...")
-	obj, err := c.repository.CreateTag(tag, plumbing.NewHash(ref), &git.CreateTagOptions{
+	options := &git.CreateTagOptions{
 		Tagger:  c.client.signature(),
 		Message: message,
-		SignKey: c.client.entity,
-	})
+	}
+	if c.client.entity != nil {
+		options.SignKey = c.client.entity
+	} else {
+		log.Warn("No OpenPGP key found, tag will not be signed")
+	}
+
+	log.Debug("Creating tag...")
+	obj, err := c.repository.CreateTag(tag, plumbing.NewHash(ref), options)
 	if err != nil {
 		return nil, err
 	}

@@ -32,6 +32,10 @@ make env
 ./kubeleaser --help
 ```
 
+## Other
+
+You can skip GPG setup by exporting `NO_GPG=true` in your environment. If you do that, you won't be able to sign the release tag.
+
 ## TODO
 
 - [ ] enable auto-merge on created PRs
