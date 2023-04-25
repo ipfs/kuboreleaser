@@ -111,4 +111,4 @@ export GPG_KEY="$gpg_key"
 export MATRIX_USER="$matrix_user"
 export MATRIX_PASSWORD="$matrix_password"
 
-envsubst -i .env.template -o .env
+cat .env.template | envsubst > .env
