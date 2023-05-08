@@ -17,7 +17,7 @@ type UpdateIPFSDocs struct {
 func (ctx UpdateIPFSDocs) Check() error {
 	log.Info("I'm going to check if the workflow that updates the IPFS docs has run already.")
 
-	return CheckWorkflowRun(ctx.GitHub, repos.IPFSDocs.Owner, repos.IPFSDocs.Repo, repos.IPFSDocs.DefaultBranch, repos.IPFSDocs.WorkflowName, repos.IPFSDocs.WorkflowJobName, fmt.Sprintf(" %s\r\n", ctx.Version.String()))
+	return CheckWorkflowRun(ctx.GitHub, repos.IPFSDocs.Owner, repos.IPFSDocs.Repo, repos.IPFSDocs.DefaultBranch, repos.IPFSDocs.WorkflowName, repos.IPFSDocs.WorkflowJobName, fmt.Sprintf(" %s\n", ctx.Version.String()))
 }
 
 func (ctx UpdateIPFSDocs) Run() error {

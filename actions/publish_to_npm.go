@@ -17,7 +17,7 @@ type PublishToNPM struct {
 func (ctx PublishToNPM) Check() error {
 	log.Info("I'm going to check if the workflow that publishes the NPM package has run already.")
 
-	return CheckWorkflowRun(ctx.GitHub, repos.NPMGoIPFS.Owner, repos.NPMGoIPFS.Repo, repos.NPMGoIPFS.DefaultBranch, repos.NPMGoIPFS.WorkflowName, repos.NPMGoIPFS.WorkflowJobName, fmt.Sprintf(" %s\r\n", ctx.Version.String()[1:]))
+	return CheckWorkflowRun(ctx.GitHub, repos.NPMGoIPFS.Owner, repos.NPMGoIPFS.Repo, repos.NPMGoIPFS.DefaultBranch, repos.NPMGoIPFS.WorkflowName, repos.NPMGoIPFS.WorkflowJobName, fmt.Sprintf(" %s\n", ctx.Version.String()[1:]))
 }
 
 func (ctx PublishToNPM) Run() error {
