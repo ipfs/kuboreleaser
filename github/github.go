@@ -328,6 +328,9 @@ func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draf
 	if err != nil {
 		return nil, err
 	}
+	if pr != nil && pr.GetMerged() {
+		return pr, nil
+	}
 	if pr == nil || pr.GetState() == "closed" {
 		pr, err = c.CreatePR(owner, repo, head, base, title, body, draft)
 		if err != nil {

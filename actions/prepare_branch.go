@@ -184,7 +184,7 @@ func (ctx PrepareBranch) UpdateVersion(branch, source, currentVersionNumber, bas
 }
 
 func (ctx PrepareBranch) Run() error {
-	log.Info("I'm going to create a PRs that update the version in the release branch and the master branch.")
+	log.Info("I'm going to create PRs that update the version in the release branch and the master branch.")
 	log.Info("I'm also going to update the changelog if we're performing the final release. Please note that it might take a while because I have to clone a looooot of repos.")
 
 	dev := fmt.Sprintf("%s.0-dev", ctx.Version.NextMajorMinor())
@@ -227,6 +227,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 			return err
 		}
 
+		fmt.Println("Use merge commit to merge this PR! You'll have to tag it after the merge.")
 		if !util.ConfirmPR(pr) {
 			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 		}
@@ -245,8 +246,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 		if err != nil {
 			return err
 		}
-		fmt.Println("Use merge commit to merge this PR! You'll have to tag it after the merge.")
-		if !util.ConfirmPR(pr) {
+		if !pr.GetMerged() && !util.ConfirmPR(pr) {
 			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 		}
 	}
