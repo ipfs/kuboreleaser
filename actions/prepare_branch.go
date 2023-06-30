@@ -245,6 +245,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 		if err != nil {
 			return err
 		}
+		fmt.Println("Use merge commit to merge this PR! You'll have to tag it after the merge.")
 		if !util.ConfirmPR(pr) {
 			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 		}
