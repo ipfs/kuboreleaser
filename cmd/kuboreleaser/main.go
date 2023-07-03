@@ -160,9 +160,9 @@ func main() {
 						Usage: "Promote the release",
 						Flags: []cli.Flag{
 							&cli.BoolFlag{
-								Name:    "skip-matrix",
-								Usage:   "Do not use Matrix client",
-								Value:  	false,
+								Name:  "skip-matrix",
+								Usage: "Do not use Matrix client",
+								Value: false,
 							},
 						},
 						Action: func(c *cli.Context) error {
