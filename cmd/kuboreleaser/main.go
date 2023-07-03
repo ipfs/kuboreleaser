@@ -158,22 +158,32 @@ func main() {
 					{
 						Name:  "promote",
 						Usage: "Promote the release",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{
+								Name:    "skip-matrix",
+								Usage:   "Do not use Matrix client",
+								Value:  	false,
+							},
+						},
 						Action: func(c *cli.Context) error {
 							log.Debug("Initializing GitHub client...")
 							github, err := github.NewClient()
 							if err != nil {
 								return err
 							}
-							log.Debug("Initializing Matrix client...")
-							matrix, err := matrix.NewClient()
-							if err != nil {
-								return err
+							var m *matrix.Client
+							if !c.Bool("skip-matrix") {
+								log.Debug("Initializing Matrix client...")
+								m, err = matrix.NewClient()
+								if err != nil {
+									return err
+								}
 							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.Promote{
 								GitHub:  github,
-								Matrix:  matrix,
+								Matrix:  m,
 								Version: version,
 							}
 
