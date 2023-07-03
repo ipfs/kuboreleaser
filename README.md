@@ -36,6 +36,8 @@ make env
 
 You can skip GPG setup by exporting `NO_GPG=true` in your environment. If you do that, you won't be able to sign the release tag.
 
+You can skip Matrix setup by exporting `NO_MATRIX=true` in your environment. If you do that, you will have to confirm promotional posts were posted to Matrix manually.
+
 ## TODO
 
 - [ ] enable auto-merge on created PRs

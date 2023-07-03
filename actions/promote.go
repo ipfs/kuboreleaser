@@ -72,21 +72,25 @@ func (ctx Promote) Check() error {
 		return fmt.Errorf("comment '%s' not found in %s (%w)", ctx.getReleaseIssueComment(), issue.GetHTMLURL(), ErrIncomplete)
 	}
 
-	messages, err := ctx.Matrix.GetLatestMessagesBy("#ipfs-chatter:ipfs.io", "@ipfsbot:matrix.org", 10)
-	if err != nil {
-		return err
-	}
-
-	var found bool
-	for _, message := range messages {
-		body, ok := message.Body()
-		if ok && strings.Contains(body, ctx.getDiscoursePostTitle()) {
-			found = true
-			break
+	if ctx.Matrix == nil {
+		log.Warn("Skipping Matrix checks because the client was not configured.")
+	} else {
+		messages, err := ctx.Matrix.GetLatestMessagesBy("#ipfs-chatter:ipfs.io", "@ipfsbot:matrix.org", 10)
+		if err != nil {
+			return err
 		}
-	}
-	if !found {
-		return fmt.Errorf("post '%s' not found in https://matrix.to/#/#ipfs-chatter:ipfs.io (%w)", ctx.getDiscoursePostTitle(), ErrIncomplete)
+
+		var found bool
+		for _, message := range messages {
+			body, ok := message.Body()
+			if ok && strings.Contains(body, ctx.getDiscoursePostTitle()) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("post '%s' not found in https://matrix.to/#/#ipfs-chatter:ipfs.io (%w)", ctx.getDiscoursePostTitle(), ErrIncomplete)
+		}
 	}
 
 	if !ctx.Version.IsPrerelease() {

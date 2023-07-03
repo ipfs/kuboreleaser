@@ -120,33 +120,12 @@ func main() {
 					},
 				},
 				Before: func(c *cli.Context) error {
-					log.Debug("Initializing git client...")
-					git, err := git.NewClient()
-					if err != nil {
-						return err
-					}
-
-					log.Debug("Initializing GitHub client...")
-					github, err := github.NewClient()
-					if err != nil {
-						return err
-					}
-
-					log.Debug("Initializing Matrix client...")
-					matrix, err := matrix.NewClient()
-					if err != nil {
-						return err
-					}
-
 					log.Debug("Initializing version...")
 					version, err := util.NewVersion(c.String("version"))
 					if err != nil {
 						return err
 					}
 
-					c.App.Metadata["git"] = git
-					c.App.Metadata["github"] = github
-					c.App.Metadata["matrix"] = matrix
 					c.App.Metadata["version"] = version
 
 					return nil
@@ -156,8 +135,15 @@ func main() {
 						Name:  "prepare-branch",
 						Usage: "Prepare a branch for the release",
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.PrepareBranch{
@@ -172,14 +158,32 @@ func main() {
 					{
 						Name:  "promote",
 						Usage: "Promote the release",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{
+								Name:  "skip-matrix",
+								Usage: "Do not use Matrix client",
+								Value: os.Getenv("NO_MATRIX") != "",
+							},
+						},
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
-							matrix := c.App.Metadata["matrix"].(*matrix.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
+							var m *matrix.Client
+							if !c.Bool("skip-matrix") {
+								log.Debug("Initializing Matrix client...")
+								m, err = matrix.NewClient()
+								if err != nil {
+									return err
+								}
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.Promote{
 								GitHub:  github,
-								Matrix:  matrix,
+								Matrix:  m,
 								Version: version,
 							}
 
@@ -190,8 +194,15 @@ func main() {
 						Name:  "publish-to-distributions",
 						Usage: "Publish the release to distributions",
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.PublishToDistributions{
@@ -207,7 +218,11 @@ func main() {
 						Name:  "publish-to-github",
 						Usage: "Publish the release to GitHub",
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.PublishToGitHub{
@@ -222,7 +237,11 @@ func main() {
 						Name:  "publish-to-npm",
 						Usage: "Publish the release to npm",
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.PublishToNPM{
@@ -237,7 +256,11 @@ func main() {
 						Name:  "publish-to-dockerhub",
 						Usage: "Publish the release to DockerHub",
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.PublishToDockerHub{
@@ -252,8 +275,15 @@ func main() {
 						Name:  "tag",
 						Usage: "Tag the release",
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.Tag{
@@ -269,7 +299,11 @@ func main() {
 						Name:  "test-ipfs-companion",
 						Usage: "Test the release with ipfs-companion",
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.TestIPFSCompanion{
@@ -284,8 +318,15 @@ func main() {
 						Name:  "update-ipfs-desktop",
 						Usage: "Update the release in ipfs-desktop",
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.UpdateIPFSDesktop{
@@ -301,8 +342,15 @@ func main() {
 						Name:  "update-interop",
 						Usage: "Update the release in interop",
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.UpdateInterop{
@@ -318,7 +366,11 @@ func main() {
 						Name:  "update-ipfs-docs",
 						Usage: "Update the release in ipfs-docs",
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.UpdateIPFSDocs{
@@ -341,8 +393,15 @@ func main() {
 							},
 						},
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.UpdateIPFSBlog{
@@ -359,7 +418,11 @@ func main() {
 						Name:  "merge-branch",
 						Usage: "Merge the release branch into master",
 						Action: func(c *cli.Context) error {
-							github := c.App.Metadata["github"].(*github.Client)
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.MergeBranch{
@@ -374,8 +437,15 @@ func main() {
 						Name:  "prepare-next",
 						Usage: "Prepare the next release",
 						Action: func(c *cli.Context) error {
-							git := c.App.Metadata["git"].(*git.Client)
-							github := c.App.Metadata["github"].(*github.Client)
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
 							version := c.App.Metadata["version"].(*util.Version)
 
 							action := &actions.PrepareNext{

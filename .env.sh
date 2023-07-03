@@ -79,24 +79,26 @@ if [[ -z "$NO_GPG" ]]; then
   fi
 fi
 
-matrix_user="$MATRIX_USER"
-if [[ -z "$matrix_user" ]]; then
-  echo "Matrix username: "
-  read matrix_user
-fi
-if [[ -z "$matrix_user" ]]; then
-  echo "Matrix username is required"
-  exit 1
-fi
+if [[ -z "$NO_MATRIX" ]]; then
+  matrix_user="$MATRIX_USER"
+  if [[ -z "$matrix_user" ]]; then
+    echo "Matrix username: "
+    read matrix_user
+  fi
+  if [[ -z "$matrix_user" ]]; then
+    echo "Matrix username is required"
+    exit 1
+  fi
 
-matrix_password="$MATRIX_PASSWORD"
-if [[ -z "$matrix_password" ]]; then
-  echo "Matrix password: "
-  read -s matrix_password
-fi
-if [[ -z "$matrix_password" ]]; then
-  echo "Matrix password is required"
-  exit 1
+  matrix_password="$MATRIX_PASSWORD"
+  if [[ -z "$matrix_password" ]]; then
+    echo "Matrix password: "
+    read -s matrix_password
+  fi
+  if [[ -z "$matrix_password" ]]; then
+    echo "Matrix password is required"
+    exit 1
+  fi
 fi
 
 export GITHUB_TOKEN="$github_token"
