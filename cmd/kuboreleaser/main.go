@@ -162,7 +162,7 @@ func main() {
 							&cli.BoolFlag{
 								Name:  "skip-matrix",
 								Usage: "Do not use Matrix client",
-								Value: false,
+								Value: os.Getenv("NO_MATRIX") != "",
 							},
 						},
 						Action: func(c *cli.Context) error {
