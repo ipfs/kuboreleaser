@@ -19,7 +19,9 @@ RUN apk update && apk add --no-cache \
   yq \
   go \
   git \
-  jq
+  jq \
+  python3 \
+  build-base
 
 RUN git config --global gc.auto 0
 RUN git config --global protocol.version 2
