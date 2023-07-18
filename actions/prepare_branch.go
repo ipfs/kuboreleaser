@@ -2,8 +2,10 @@ package actions
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 
 	gh "github.com/google/go-github/v48/github"
 	"github.com/ipfs/kuboreleaser/git"
@@ -183,6 +185,75 @@ func (ctx PrepareBranch) UpdateVersion(branch, source, currentVersionNumber, bas
 	return pr, nil
 }
 
+func (ctx PrepareBranch) GetBody(branch, foreword string) (string, error) {
+	kuboCommits, err := ctx.GitHub.Compare(repos.Kubo.Owner, repos.Kubo.Repo, branch, repos.Kubo.DefaultBranch)
+	if err != nil {
+		return "", err
+	}
+	file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, "go.mod", branch)
+	if err != nil {
+		return "", err
+	}
+	if file == nil {
+		return "", fmt.Errorf("https://github.com/%s/%s/tree/%s/go.mod not found", repos.Kubo.Owner, repos.Kubo.Repo, branch)
+	}
+
+	content, err := base64.StdEncoding.DecodeString(*file.Content)
+	if err != nil {
+		return "", err
+	}
+
+	// find the boxo version
+	boxoVersion := ""
+	for _, line := range strings.Split(string(content[:]), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, fmt.Sprintf("github.com/%s/%s", repos.Boxo.Owner, repos.Boxo.Repo)) {
+			boxoVersion = strings.Split(line, " ")[1]
+			break
+		}
+	}
+	if boxoVersion == "" {
+		return "", fmt.Errorf("boxo version not found in https://github.com/%s/%s/tree/%s/go.mod", repos.Kubo.Owner, repos.Kubo.Repo, branch)
+	}
+
+	// find the boxo commit or tag in boxo version
+	boxoBranch := ""
+	if strings.Contains(boxoVersion, "-") {
+		boxoBranch = strings.Split(boxoVersion, "-")[2]
+	} else {
+		boxoBranch = boxoVersion
+	}
+
+	boxoCommits, err := ctx.GitHub.Compare(repos.Boxo.Owner, repos.Boxo.Repo, boxoBranch, repos.Boxo.DefaultBranch)
+	if err != nil {
+		return "", err
+	}
+
+	kuboCommitsStr := "```\n"
+	for _, commit := range kuboCommits[:100] {
+		kuboCommitsStr += fmt.Sprintf("%s %s\n", commit.GetSHA()[:7], strings.Split(commit.GetCommit().GetMessage(), "\n")[0])
+	}
+	kuboCommitsStr += "```"
+
+	boxoCommitsStr := "```\n"
+	for _, commit := range boxoCommits[:100] {
+		boxoCommitsStr += fmt.Sprintf("%s %s\n", commit.GetSHA()[:7], strings.Split(commit.GetCommit().GetMessage(), "\n")[0])
+	}
+	boxoCommitsStr += "```"
+
+	return fmt.Sprintf(`%s
+
+---
+
+#### Kubo commits **NOT** included in this release
+
+%s
+
+#### Boxo commits **NOT** included in this release
+
+%s`, foreword, kuboCommitsStr, boxoCommitsStr), nil
+}
+
 func (ctx PrepareBranch) Run() error {
 	log.Info("I'm going to create PRs that update the version in the release branch and the master branch.")
 	log.Info("I'm also going to update the changelog if we're performing the final release. Please note that it might take a while because I have to clone a looooot of repos.")
@@ -203,6 +274,17 @@ func (ctx PrepareBranch) Run() error {
 	draft := ctx.Version.IsPrerelease()
 
 	pr, err := ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
+	if err != nil {
+		return err
+	}
+
+	body, err = ctx.GetBody(branch, body)
+	if err != nil {
+		return err
+	}
+
+	pr.Body = &body
+	err = ctx.GitHub.UpdatePR(pr)
 	if err != nil {
 		return err
 	}

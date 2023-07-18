@@ -357,6 +357,17 @@ func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draf
 	return pr, nil
 }
 
+func (c *Client) UpdatePR(pr *github.PullRequest) error {
+	log.WithFields(log.Fields{
+		"owner":  pr.Base.Repo.Owner.GetLogin(),
+		"repo":   pr.Base.Repo.GetName(),
+		"number": pr.GetNumber(),
+	}).Debug("Updating PR...")
+
+	_, _, err := c.v3.PullRequests.Edit(context.Background(), pr.Base.Repo.Owner.GetLogin(), pr.Base.Repo.GetName(), pr.GetNumber(), pr)
+	return err
+}
+
 func (c *Client) GetFile(owner, repo, path, ref string) (*github.RepositoryContent, error) {
 	log.WithFields(log.Fields{
 		"owner": owner,
@@ -745,4 +756,37 @@ func (c *Client) GetTag(owner, repo, tag string) (*github.Tag, error) {
 	}
 
 	return t, err
+}
+
+func (c *Client) Compare(owner, repo, base, head string) ([]*github.RepositoryCommit, error) {
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+		"base":  base,
+		"head":  head,
+	}).Debug("Comparing...")
+
+	opts := &github.ListOptions{PerPage: 100}
+	var commits []*github.RepositoryCommit
+	for {
+		cs, r, err := c.v3.Repositories.CompareCommits(context.Background(), owner, repo, base, head, opts)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, cs.Commits...)
+		if r.NextPage == 0 {
+			break
+		}
+		opts.Page = r.NextPage
+	}
+
+	if len(commits) > 0 {
+		log.WithFields(log.Fields{
+			"commits": len(commits),
+		}).Debug("Found commits")
+	} else {
+		log.Debug("Commits not found")
+	}
+
+	return commits, nil
 }
