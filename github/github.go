@@ -359,9 +359,9 @@ func (c *Client) GetOrCreatePR(owner, repo, head, base, title, body string, draf
 
 func (c *Client) UpdatePR(pr *github.PullRequest) error {
 	log.WithFields(log.Fields{
-		"owner":    pr.Base.Repo.Owner.GetLogin(),
-		"repo":     pr.Base.Repo.GetName(),
-		"number":   pr.GetNumber(),
+		"owner":  pr.Base.Repo.Owner.GetLogin(),
+		"repo":   pr.Base.Repo.GetName(),
+		"number": pr.GetNumber(),
 	}).Debug("Updating PR...")
 
 	_, _, err := c.v3.PullRequests.Edit(context.Background(), pr.Base.Repo.Owner.GetLogin(), pr.Base.Repo.GetName(), pr.GetNumber(), pr)

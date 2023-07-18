@@ -245,11 +245,11 @@ func (ctx PrepareBranch) GetBody(branch, foreword string) (string, error) {
 
 ---
 
-### Kubo commits **NOT** included in this release
+#### Kubo commits **NOT** included in this release
 
 %s
 
-### Boxo commits **NOT** included in this release
+#### Boxo commits **NOT** included in this release
 
 %s`, foreword, kuboCommitsStr, boxoCommitsStr), nil
 }
