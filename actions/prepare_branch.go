@@ -230,13 +230,13 @@ func (ctx PrepareBranch) GetBody(branch, foreword string) (string, error) {
 	}
 
 	kuboCommitsStr := "```\n"
-	for _, commit := range kuboCommits[:100] {
+	for _, commit := range kuboCommits {
 		kuboCommitsStr += fmt.Sprintf("%s %s\n", commit.GetSHA()[:7], strings.Split(commit.GetCommit().GetMessage(), "\n")[0])
 	}
 	kuboCommitsStr += "```"
 
 	boxoCommitsStr := "```\n"
-	for _, commit := range boxoCommits[:100] {
+	for _, commit := range boxoCommits {
 		boxoCommitsStr += fmt.Sprintf("%s %s\n", commit.GetSHA()[:7], strings.Split(commit.GetCommit().GetMessage(), "\n")[0])
 	}
 	boxoCommitsStr += "```"
