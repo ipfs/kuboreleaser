@@ -339,30 +339,6 @@ func main() {
 						},
 					},
 					{
-						Name:  "update-interop",
-						Usage: "Update the release in interop",
-						Action: func(c *cli.Context) error {
-							git, err := git.NewClient()
-							if err != nil {
-								return err
-							}
-							log.Debug("Initializing GitHub client...")
-							github, err := github.NewClient()
-							if err != nil {
-								return err
-							}
-							version := c.App.Metadata["version"].(*util.Version)
-
-							action := &actions.UpdateInterop{
-								Git:     git,
-								GitHub:  github,
-								Version: version,
-							}
-
-							return Execute(action, c)
-						},
-					},
-					{
 						Name:  "update-ipfs-docs",
 						Usage: "Update the release in ipfs-docs",
 						Action: func(c *cli.Context) error {
