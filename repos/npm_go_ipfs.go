@@ -1,6 +1,6 @@
 package repos
 
-type npmGoIPFS struct {
+type npmKubo struct {
 	Owner           string
 	Repo            string
 	DefaultBranch   string
@@ -8,9 +8,9 @@ type npmGoIPFS struct {
 	WorkflowJobName string
 }
 
-var NPMGoIPFS = npmGoIPFS{
+var NPMKubo = npmKubo{
 	Owner:           "ipfs",
-	Repo:            "npm-go-ipfs",
+	Repo:            "npm-kubo",
 	DefaultBranch:   "master",
 	WorkflowName:    "main.yml",
 	WorkflowJobName: "publish",
