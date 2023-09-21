@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 func Getenv(key, fallback string) string {
@@ -40,7 +40,7 @@ func GetenvPromptSecret(key string, prompt ...string) string {
 		} else {
 			fmt.Printf("%s is not set. Please enter a secret value: ", key)
 		}
-		bytes, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+		bytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			panic(err)
 		}
