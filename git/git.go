@@ -25,18 +25,9 @@ type Client struct {
 }
 
 func NewClient() (*Client, error) {
-	name := os.Getenv("GITHUB_USER_NAME")
-	if name == "" {
-		name = "Kubo Releaser"
-	}
-	email := os.Getenv("GITHUB_USER_EMAIL")
-	if email == "" {
-		email = "noreply+kuboreleaser@ipfs.tech"
-	}
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return nil, fmt.Errorf("GITHUB_TOKEN not set")
-	}
+	name := util.GetenvPrompt("GITHUB_USER_NAME")
+	email := util.GetenvPrompt("GITHUB_USER_EMAIL")
+	token := util.GetenvPromptSecret("GITHUB_TOKEN", "The token should have the following scopes: ... Please enter the token:")
 
 	// create HeaderAuth
 	auth, err := NewHeaderAuth(token)
@@ -44,8 +35,8 @@ func NewClient() (*Client, error) {
 		return nil, err
 	}
 
-	disabled := os.Getenv("NO_GPG")
-	if disabled != "" {
+	disabled := util.GetenvBool("NO_GPG")
+	if disabled {
 		return &Client{
 			name:  name,
 			email: email,
@@ -53,11 +44,8 @@ func NewClient() (*Client, error) {
 		}, nil
 	}
 
-	key64 := os.Getenv("GPG_KEY")
-	if key64 == "" {
-		return nil, fmt.Errorf("GPG_KEY not set")
-	}
-	pass := os.Getenv("GPG_PASSPHRASE")
+	key64 := util.GetenvPromptSecret("GPG_KEY", "The key should be base64 encoded. Please enter the key:")
+	pass := util.GetenvPromptSecret("GPG_PASSPHRASE")
 
 	// create OpenPGP Entity
 	key, err := base64.StdEncoding.DecodeString(key64)
