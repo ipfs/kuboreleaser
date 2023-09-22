@@ -21,7 +21,7 @@ func GetenvBool(key string) bool {
 
 func GetenvPrompt(key string, prompt ...string) string {
 	value := Getenv(key, "")
-	if value == "" {
+	while value == "" {
 		if len(prompt) > 0 {
 			fmt.Printf("%s is not set. %s: ", key, prompt[0])
 		} else {
@@ -34,7 +34,7 @@ func GetenvPrompt(key string, prompt ...string) string {
 
 func GetenvPromptSecret(key string, prompt ...string) string {
 	value := Getenv(key, "")
-	if value == "" {
+	while value == "" {
 		if len(prompt) > 0 {
 			fmt.Printf("%s is not set. %s: ", key, prompt[0])
 		} else {
