@@ -280,7 +280,7 @@ func (ctx PrepareBranch) Run() error {
 		return err
 	}
 
-	fmt.Printf(`Your release PR is ready at %s`+"\n", pr.GetHTMLURL())
+	fmt.Printf("Your release PR is ready at %s\n", pr.GetHTMLURL())
 
 	// TODO: check for conflicts and tell the user to resolve them
 	// or resolve them automatically with git merge origin/release -X ours
