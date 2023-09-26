@@ -17,7 +17,7 @@ It was originally started here - https://github.com/ipfs/kubo/pull/9493 - and is
 1. Build the binary
 
 ```bash
-make kubeleaser
+make kuboreleaser
 ```
 
 2. Create the .env file with your credentials
