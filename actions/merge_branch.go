@@ -24,7 +24,7 @@ func (ctx MergeBranch) Run() error {
 	log.Info("I'm going to create a PR that merges the release branch to master and ask you to merge it for me.")
 
 	branch := repos.Kubo.ReleaseMergeBranch(ctx.Version)
-	title := fmt.Sprintf("Merge Release: %s", ctx.Version)
+	title := fmt.Sprintf("Merge Release: %s [skip changelog]", ctx.Version)
 	body := fmt.Sprintf("This PR merges the release branch %s to %s", ctx.Version, repos.Kubo.DefaultBranch)
 
 	_, err := ctx.GitHub.GetOrCreateBranch(repos.Kubo.Owner, repos.Kubo.Repo, branch, repos.Kubo.ReleaseBranch)

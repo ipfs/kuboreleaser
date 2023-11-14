@@ -260,7 +260,7 @@ func (ctx PrepareBranch) Run() error {
 	}
 	currentVersionNumber := ctx.Version.String()[1:]
 	base := repos.Kubo.ReleaseBranch
-	title := fmt.Sprintf("Release: %s", ctx.Version.MajorMinorPatch())
+	title := fmt.Sprintf("Release: %s [skip changelog]", ctx.Version.MajorMinorPatch())
 	body := fmt.Sprintf("This PR creates release %s", ctx.Version.MajorMinorPatch())
 	draft := ctx.Version.IsPrerelease()
 
@@ -311,7 +311,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 		source = repos.Kubo.DefaultBranch
 		currentVersionNumber = dev[1:]
 		base = repos.Kubo.DefaultBranch
-		title = fmt.Sprintf("Update Version: %s", ctx.Version.MajorMinor())
+		title = fmt.Sprintf("Update Version: %s [skip changelog]", ctx.Version.MajorMinor())
 		body = fmt.Sprintf("This PR updates version as part of the %s release", ctx.Version.MajorMinor())
 		draft = false
 
