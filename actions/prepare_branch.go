@@ -50,18 +50,9 @@ func (ctx PrepareBranch) MkReleaseLog() error {
 	filename := fmt.Sprintf("docs/changelogs/%s.md", ctx.Version.MajorMinor())
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 
-	name := os.Getenv("GITHUB_USER_NAME")
-	if name == "" {
-		name = "Kubo Releaser"
-	}
-	email := os.Getenv("GITHUB_USER_EMAIL")
-	if email == "" {
-		email = "noreply+kuboreleaser@ipfs.tech"
-	}
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return fmt.Errorf("GITHUB_TOKEN not set")
-	}
+	name := util.GetenvPrompt("GITHUB_USER_NAME")
+	email := util.GetenvPrompt("GITHUB_USER_EMAIL")
+	token := util.GetenvPromptSecret("GITHUB_TOKEN", "The token should have the following scopes: ... Please enter the token:")
 
 	err := os.MkdirAll(rootname, 0755)
 	if err != nil {
@@ -289,7 +280,7 @@ func (ctx PrepareBranch) Run() error {
 		return err
 	}
 
-	fmt.Printf(`Your release PR is ready at %s\n`, pr.GetHTMLURL())
+	fmt.Printf("Your release PR is ready at %s\n", pr.GetHTMLURL())
 
 	// TODO: check for conflicts and tell the user to resolve them
 	// or resolve them automatically with git merge origin/release -X ours

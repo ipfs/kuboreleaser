@@ -3,8 +3,8 @@ package matrix
 import (
 	"fmt"
 	"net/url"
-	"os"
 
+	"github.com/ipfs/kuboreleaser/util"
 	"github.com/matrix-org/gomatrix"
 	log "github.com/sirupsen/logrus"
 )
@@ -14,16 +14,10 @@ type Client struct {
 }
 
 func NewClient() (*Client, error) {
-	url := os.Getenv("MATRIX_URL")
-	if url == "" {
-		url = "https://matrix-client.matrix.org/"
-	}
-	user := os.Getenv("MATRIX_USER")
-	if user == "" {
-		return nil, fmt.Errorf("MATRIX_USER not set")
-	}
-	token := os.Getenv("MATRIX_TOKEN")
-	password := os.Getenv("MATRIX_PASSWORD")
+	url := util.GetenvPrompt("MATRIX_URL")
+	user := util.GetenvPrompt("MATRIX_USER")
+	token := util.GetenvPromptSecret("MATRIX_TOKEN", "If you don't have a token, you can leave it blank and use a password instead. Please enter the token:")
+	password := util.GetenvPromptSecret("MATRIX_PASSWORD", "If you don't have a password, you can leave it blank and use a token instead. Please enter the password:")
 	if token == "" && password == "" {
 		return nil, fmt.Errorf("MATRIX_TOKEN nor MATRIX_PASSWORD are set")
 	}

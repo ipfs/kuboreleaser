@@ -12,6 +12,7 @@ require (
 	github.com/urfave/cli/v2 v2.23.7
 	golang.org/x/mod v0.7.0
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+	golang.org/x/term v0.2.0
 )
 
 require (

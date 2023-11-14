@@ -22,6 +22,8 @@ make kubeleaser
 
 2. Create the .env file with your credentials
 
+_NOTE_: You can skip this step if you want to be prompted for the credentials instead.
+
 ```bash
 make env
 ```

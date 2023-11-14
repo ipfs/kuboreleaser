@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 
+	"github.com/ipfs/kuboreleaser/util"
 	"github.com/shurcooL/githubv4"
 	log "github.com/sirupsen/logrus"
 
@@ -24,10 +24,7 @@ type Client struct {
 }
 
 func NewClient() (*Client, error) {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return nil, fmt.Errorf("GITHUB_TOKEN not set")
-	}
+	token := util.GetenvPromptSecret("GITHUB_TOKEN", "The token should have the following scopes: ... Please enter the token:")
 
 	sts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
