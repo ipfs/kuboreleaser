@@ -9,7 +9,7 @@ RUN go mod download
 COPY . ./
 RUN go build -o kuboreleaser ./cmd/kuboreleaser/main.go
 
-FROM alpine:3.17
+FROM alpine
 
 RUN apk update && apk add --no-cache \
   bash \
