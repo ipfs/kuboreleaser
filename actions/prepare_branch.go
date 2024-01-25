@@ -322,10 +322,8 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 
 		if ctx.Version.IsPrerelease() {
 			fmt.Printf(`Release PR ready at %s. Do not merge it.`, pr.GetHTMLURL())
-		} else {
-			if !ctx.Version.IsPrerelease() && !pr.GetMerged() && !util.ConfirmPR(pr) {
-				return fmt.Errorf("%s not merged", pr.GetHTMLURL())
-			}
+		} else if !pr.GetMerged() && !util.ConfirmPR(pr) {
+			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
 		}
 	}
 
