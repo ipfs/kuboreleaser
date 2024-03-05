@@ -1,6 +1,6 @@
 module github.com/ipfs/kuboreleaser
 
-go 1.22
+go 1.21
 
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
