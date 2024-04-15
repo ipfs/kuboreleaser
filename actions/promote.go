@@ -146,7 +146,7 @@ Please approve once the post is up.`, ctx.getDiscoursePostTitle(), ctx.getDiscou
 		prompt := fmt.Sprintf(`Go to %s and add the link to the IPFS Discourse post to the top of the release notes.
 
 Use the following template:
-- 💬 [Discuss](https://discuss.ipfs.io/t/kubo-%s-is-out/XXXX)
+- [💬 Discuss](https://discuss.ipfs.io/t/kubo-%s-is-out/XXXX)
 
 Please approve once the post is linked.`, url, strings.ReplaceAll(ctx.Version.String(), ".", "-"))
 
