@@ -31,7 +31,7 @@ make env
 3. Run the CLI
 
 ```bash
-./kubeleaser --help
+./kuboreleaser --help
 ```
 
 ## Other
