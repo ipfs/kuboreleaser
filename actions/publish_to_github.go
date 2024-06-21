@@ -71,7 +71,17 @@ func (ctx PublishToGitHub) Run() error {
 		}
 	}
 
-	_, err := ctx.GitHub.GetOrCreateRelease(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ctx.Version.String(), body, ctx.Version.IsPrerelease())
+	latestRelease, err := ctx.GitHub.GetLatestRelease(repos.Kubo.Owner, repos.Kubo.Repo)
+	if err != nil {
+		return err
+	}
+
+	latestVersion, err := util.NewVersion(latestRelease.GetTagName())
+	if err != nil {
+		return err
+	}
+
+	_, err = ctx.GitHub.GetOrCreateRelease(repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ctx.Version.String(), body, ctx.Version.IsPrerelease(), ctx.Version.Compare(latestVersion) >= 0)
 	if err != nil {
 		return err
 	}

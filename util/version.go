@@ -19,6 +19,10 @@ func NewVersion(version string) (*Version, error) {
 	return &Version{Version: version}, nil
 }
 
+func (v Version) Compare(other *Version) int {
+	return semver.Compare(v.Version, other.Version)
+}
+
 func (v Version) MajorMinor() string {
 	return semver.MajorMinor(v.Version)
 }

@@ -662,6 +662,28 @@ func (c *Client) GetWorkflowRunLogs(owner, repo string, id int64) (*WorkflowRunL
 	return logs, nil
 }
 
+func (c *Client) GetLatestRelease(owner, repo string) (*github.RepositoryRelease, error) {
+	log.WithFields(log.Fields{
+		"owner": owner,
+		"repo":  repo,
+	}).Debug("Searching for latest release...")
+
+	r, _, err := c.v3.Repositories.GetLatestRelease(context.Background(), owner, repo)
+	if err != nil && strings.Contains(err.Error(), "404") {
+		return nil, nil
+	}
+
+	if r != nil {
+		log.WithFields(log.Fields{
+			"url": r.GetHTMLURL(),
+		}).Debug("Found latest release")
+	} else {
+		log.Debug("Latest release not found")
+	}
+
+	return r, err
+}
+
 func (c *Client) GetRelease(owner, repo, tag string) (*github.RepositoryRelease, error) {
 	log.WithFields(log.Fields{
 		"owner": owner,
@@ -685,7 +707,7 @@ func (c *Client) GetRelease(owner, repo, tag string) (*github.RepositoryRelease,
 	return r, err
 }
 
-func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease bool) (*github.RepositoryRelease, error) {
+func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease bool, latest bool) (*github.RepositoryRelease, error) {
 	log.WithFields(log.Fields{
 		"owner":      owner,
 		"repo":       repo,
@@ -693,13 +715,20 @@ func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease b
 		"name":       name,
 		"body":       body,
 		"prerelease": prerelease,
+		"latest": 	  latest,
 	}).Debug("Creating release...")
+
+	makeLatest := "false"
+	if latest {
+		makeLatest = "true"
+	}
 
 	r, _, err := c.v3.Repositories.CreateRelease(context.Background(), owner, repo, &github.RepositoryRelease{
 		TagName:    &tag,
 		Name:       &name,
 		Body:       &body,
 		Prerelease: &prerelease,
+		MakeLatest: &makeLatest,
 	})
 
 	if r != nil {
@@ -713,13 +742,13 @@ func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease b
 	return r, err
 }
 
-func (c *Client) GetOrCreateRelease(owner, repo, tag, name, body string, prerelease bool) (*github.RepositoryRelease, error) {
+func (c *Client) GetOrCreateRelease(owner, repo, tag, name, body string, prerelease bool, latest bool) (*github.RepositoryRelease, error) {
 	r, err := c.GetRelease(owner, repo, tag)
 	if err != nil {
 		return nil, err
 	}
 	if r == nil {
-		return c.CreateRelease(owner, repo, tag, name, body, prerelease)
+		return c.CreateRelease(owner, repo, tag, name, body, prerelease, latest)
 	}
 	return r, nil
 }
