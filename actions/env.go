@@ -8,10 +8,11 @@ import (
 	"github.com/ipfs/kuboreleaser/util"
 )
 
-type Env struct {}
+type Env struct{}
 
 //go:embed embed/.env.sh
 var envScript string
+
 //go:embed embed/.env.template
 var envTemplate string
 
@@ -45,9 +46,9 @@ func (ctx Env) Run() error {
 	}
 
 	cmd := util.Command{
-		Name: envScriptFile.Name(),
+		Name:  envScriptFile.Name(),
 		Stdin: os.Stdin,
-		Env: append(os.Environ(), fmt.Sprintf("ENV_TEMPLATE=%s", envTemplateFile.Name())),
+		Env:   append(os.Environ(), fmt.Sprintf("ENV_TEMPLATE=%s", envTemplateFile.Name())),
 	}
 	err = cmd.Run()
 	if err != nil {

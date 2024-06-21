@@ -715,7 +715,7 @@ func (c *Client) CreateRelease(owner, repo, tag, name, body string, prerelease b
 		"name":       name,
 		"body":       body,
 		"prerelease": prerelease,
-		"latest": 	  latest,
+		"latest":     latest,
 	}).Debug("Creating release...")
 
 	makeLatest := "false"

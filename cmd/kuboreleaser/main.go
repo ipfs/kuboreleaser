@@ -121,7 +121,7 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name: "env",
+				Name:  "env",
 				Usage: "Generate .env file in your current directory",
 				Action: func(c *cli.Context) error {
 					action := actions.Env{}
