@@ -23,6 +23,8 @@ type Command struct {
 	Dir    string
 	Stdout io.Writer
 	Stderr io.Writer
+	Stdin  io.Reader
+	Env    []string
 }
 
 func (c *Command) Run() error {
@@ -45,6 +47,12 @@ func (c *Command) Run() error {
 		cmd.Stderr = c.Stderr
 	} else {
 		cmd.Stderr = os.Stderr
+	}
+	if c.Stdin != nil {
+		cmd.Stdin = c.Stdin
+	}
+	if c.Env != nil {
+		cmd.Env = c.Env
 	}
 	return cmd.Run()
 }

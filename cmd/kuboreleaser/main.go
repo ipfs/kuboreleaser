@@ -72,6 +72,17 @@ func Execute(action actions.IAction, c *cli.Context) error {
 	return nil
 }
 
+func ExecuteAll(actions []actions.IAction, c *cli.Context) error {
+	// execute actions one by one, fail if any of them fails
+	for _, action := range actions {
+		err := Execute(action, c)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	app := &cli.App{
 		Name:  "kuboreleaser",
@@ -109,6 +120,14 @@ func main() {
 			return nil
 		},
 		Commands: []*cli.Command{
+			{
+				Name:  "env",
+				Usage: "Generate .env file in your current directory",
+				Action: func(c *cli.Context) error {
+					action := actions.Env{}
+					return Execute(action, c)
+				},
+			},
 			{
 				Name:  "release",
 				Usage: "Release Kubo",
@@ -188,6 +207,44 @@ func main() {
 							}
 
 							return Execute(action, c)
+						},
+					},
+					{
+						Name:  "publish-to-all",
+						Usage: "Publish the release to DockerHub, distributions, NPM, and GitHub",
+						Action: func(c *cli.Context) error {
+							git, err := git.NewClient()
+							if err != nil {
+								return err
+							}
+							log.Debug("Initializing GitHub client...")
+							github, err := github.NewClient()
+							if err != nil {
+								return err
+							}
+							version := c.App.Metadata["version"].(*util.Version)
+
+							actions := []actions.IAction{
+								&actions.PublishToDockerHub{
+									GitHub:  github,
+									Version: version,
+								},
+								&actions.PublishToDistributions{
+									Git:     git,
+									GitHub:  github,
+									Version: version,
+								},
+								&actions.PublishToNPM{
+									GitHub:  github,
+									Version: version,
+								},
+								&actions.PublishToGitHub{
+									GitHub:  github,
+									Version: version,
+								},
+							}
+
+							return ExecuteAll(actions, c)
 						},
 					},
 					{
