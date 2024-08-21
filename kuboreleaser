@@ -1,3 +1,9 @@
 #!/usr/bin/env bash
 
+if ! test -f ".env"; then
+    ./actions/embed/.env.sh
+    echo ".env created, try executing kuboreleaser again"
+    exit 0
+fi
+
 docker run -it --env-file .env kuboreleaser "$@"
