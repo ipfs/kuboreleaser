@@ -6,4 +6,4 @@ if ! test -f ".env"; then
     exit 0
 fi
 
-docker run -it --env-file .env -v $(pwd)/.env:/.env:ro kuboreleaser "$@"
+docker run -it --rm --env-file .env -v $(pwd)/.env:/.env:ro kuboreleaser "$@"
