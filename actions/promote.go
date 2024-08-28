@@ -3,7 +3,7 @@ package actions
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -43,7 +43,7 @@ func fetchEarlyTestersList() string {
 		return ""
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Warn("Error reading EARLY_TESTERS.md:", err)
 		return ""
