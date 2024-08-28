@@ -3,6 +3,9 @@ package actions
 import (
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/ipfs/kuboreleaser/github"
@@ -32,22 +35,41 @@ See:
 - Release Notes: https://github.com/ipfs/kubo/blob/release-%s/docs/changelogs/%s.md`, ctx.Version, ctx.Version, ctx.Version, ctx.Version, ctx.Version.MajorMinorPatch(), ctx.Version.MajorMinor())
 }
 
+func fetchEarlyTestersList() string {
+	url := "https://raw.githubusercontent.com/ipfs/kubo/master/docs/EARLY_TESTERS.md"
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Warn("Error fetching EARLY_TESTERS.md:", err)
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Warn("Error reading EARLY_TESTERS.md:", err)
+		return ""
+	}
+	content := string(body)
+
+	// Find the "Who has signed up?" section
+	re := regexp.MustCompile(`(?s)## Who has signed up\?(.+?)(?:$|##)`)
+	matches := re.FindStringSubmatch(content)
+	if len(matches) < 2 {
+		log.Warn("'Who has signed up' Section not found in EARLY_TESTERS.md")
+		return ""
+	}
+	testers := strings.TrimSpace(matches[1])
+
+	return testers
+}
+
 func (ctx *Promote) getReleaseIssueComment() string {
-	if ctx.Version.IsPrerelease() {
-		return fmt.Sprintf(`Early testers ping for %s testing 😄.
+	testers := fetchEarlyTestersList()
+	if ctx.Version.IsPrerelease() && testers != "" {
+		return fmt.Sprintf(`Early testers ping for %s testing ✨
 
-- [ ] Charity Engine (@rytiss, @tristanolive)
-- [ ] Fission (@bmann)
-- [ ] Infura (@MichaelMure)
-- [ ] OrbitDB (@aphelionz)
-- [ ] pacman.store (@RubenKelevra)
-- [ ] Pinata (@obo20)
-- [ ] PL EngRes bifrost (@gmasgras)
-- [ ] RTrade (@postables)
-- [ ] Siderus (@koalalorenzo)
-- [ ] Textile (@sanderpick)
+%s
 
-You're getting this message because you're listed [here](https://github.com/ipfs/kubo/blob/master/docs/EARLY_TESTERS.md#who-has-signed-up). Please update this list if you no longer want to be included.`, ctx.Version)
+You're getting this message because you're listed [here](https://github.com/ipfs/kubo/blob/master/docs/EARLY_TESTERS.md#who-has-signed-up). Please update this list if you no longer want to be included.`, ctx.Version, testers)
 	} else {
 		return fmt.Sprintf("🎉 Kubo [%s](https://github.com/ipfs/kubo/releases/tag/%s) is out!", ctx.Version, ctx.Version)
 	}
