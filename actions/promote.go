@@ -151,7 +151,7 @@ func (ctx Promote) Run() error {
 
 	prompt := fmt.Sprintf(`IPFS Discourse does not have API access enabled.
 
-Please go to https://discuss.ipfs.io and create a new topic with the following content:
+Please go to https://discuss.ipfs.tech and create a new topic with the following content:
 Title: %s
 Category: News
 Tags: kubo, go-ipfs
@@ -168,7 +168,7 @@ Please approve once the post is up.`, ctx.getDiscoursePostTitle(), ctx.getDiscou
 		prompt := fmt.Sprintf(`Go to %s and add the link to the IPFS Discourse post to the top of the release notes.
 
 Use the following template:
-- [💬 Discuss](https://discuss.ipfs.io/t/kubo-%s-is-out/XXXX)
+- [💬 Discuss](https://discuss.ipfs.tech/t/kubo-%s-is-out/XXXX)
 
 Please approve once the post is linked.`, url, strings.ReplaceAll(ctx.Version.String(), ".", "-"))
 
