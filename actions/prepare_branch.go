@@ -258,12 +258,12 @@ func (ctx PrepareBranch) Run() error {
 		// NOTE: For patch releases we want to create the new release branch from the previous release branch, e.g.
 		// when creating release-0.50.6, we want to create it from release-0.50.5
 		patchVersion, err := strconv.Atoi(ctx.Version.Patch())
-		if (err != nil) {
+		if err != nil {
 			return err
 		}
-		previousVersionString := fmt.Sprintf("%s.%s", ctx.Version.MajorMinor(), strconv.Itoa(patchVersion - 1))
+		previousVersionString := fmt.Sprintf("%s.%s", ctx.Version.MajorMinor(), strconv.Itoa(patchVersion-1))
 		previousVersion, err := util.NewVersion(previousVersionString)
-		if (err != nil) {
+		if err != nil {
 			return err
 		}
 		source = repos.Kubo.VersionReleaseBranch(previousVersion)
