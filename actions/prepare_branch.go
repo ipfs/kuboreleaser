@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	gh "github.com/google/go-github/v48/github"
@@ -254,7 +255,18 @@ func (ctx PrepareBranch) Run() error {
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 	var source string
 	if ctx.Version.IsPatch() {
-		source = repos.Kubo.ReleaseBranch // TODO: this is not correct, we should use the previous patch release branch
+		// NOTE: For patch releases we want to create the new release branch from the previous release branch, e.g.
+		// when creating release-0.50.6, we want to create it from release-0.50.5
+		patchVersion, err := strconv.Atoi(ctx.Version.Patch())
+		if (err != nil) {
+			return err
+		}
+		previousVersionString := fmt.Sprintf("%s.%s", ctx.Version.MajorMinor(), strconv.Itoa(patchVersion - 1))
+		previousVersion, err := util.NewVersion(previousVersionString)
+		if (err != nil) {
+			return err
+		}
+		source = repos.Kubo.VersionReleaseBranch(previousVersion)
 	} else {
 		source = repos.Kubo.DefaultBranch
 	}
