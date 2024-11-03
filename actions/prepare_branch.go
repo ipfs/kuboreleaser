@@ -264,6 +264,8 @@ func (ctx PrepareBranch) Run() error {
 	body := fmt.Sprintf("This PR creates release %s", ctx.Version.MajorMinorPatch())
 	draft := ctx.Version.IsPrerelease()
 
+	// NOTE: This should update const CurrentVersionNumber in version.go to the full version without a v prefix
+	// on the version release branch created from source
 	pr, err := ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
 	if err != nil {
 		return err
