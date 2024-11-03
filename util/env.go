@@ -23,9 +23,9 @@ func GetenvPrompt(key string, prompt ...string) string {
 	value := Getenv(key, "")
 	if value == "" {
 		if len(prompt) > 0 {
-			fmt.Printf("%s is not set. %s: ", key, prompt[0])
+			fmt.Printf("🙋 %s is not set. %s: ", key, prompt[0])
 		} else {
-			fmt.Printf("%s is not set. Please enter a value: ", key)
+			fmt.Printf("🙋 %s is not set. Please enter a value: ", key)
 		}
 		fmt.Scanln(&value)
 	}
@@ -36,9 +36,9 @@ func GetenvPromptSecret(key string, prompt ...string) string {
 	value := Getenv(key, "")
 	if value == "" {
 		if len(prompt) > 0 {
-			fmt.Printf("%s is not set. %s: ", key, prompt[0])
+			fmt.Printf("🙋 %s is not set. %s: ", key, prompt[0])
 		} else {
-			fmt.Printf("%s is not set. Please enter a secret value: ", key)
+			fmt.Printf("🙋 %s is not set. Please enter a secret value: ", key)
 		}
 		bytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {

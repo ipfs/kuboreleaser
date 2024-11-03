@@ -14,7 +14,7 @@ type Version struct {
 
 func NewVersion(version string) (*Version, error) {
 	if !semver.IsValid(version) {
-		return nil, fmt.Errorf("%s is invalid", version)
+		return nil, fmt.Errorf("🚨 %s is invalid", version)
 	}
 	return &Version{Version: version}, nil
 }

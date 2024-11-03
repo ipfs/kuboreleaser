@@ -24,7 +24,7 @@ func (ctx PublishToGitHub) Check() error {
 		return err
 	}
 	if release == nil {
-		return fmt.Errorf("release '%s' not found in https://github.com/%s/%s/releases (%w)", ctx.Version.String(), repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
+		return fmt.Errorf("⚠️ release '%s' not found in https://github.com/%s/%s/releases (%w)", ctx.Version.String(), repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
 	}
 
 	return CheckWorkflowRun(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.SyncReleaseAssetsWorkflowJobName, ctx.Version.String())
@@ -42,7 +42,7 @@ func (ctx PublishToGitHub) Run() error {
 			return err
 		}
 		if file == nil {
-			return fmt.Errorf("https://github.com/%s/%s/blob/%s/docs/changelogs/%s.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseBranch, ctx.Version.MajorMinor())
+			return fmt.Errorf("🚨 https://github.com/%s/%s/blob/%s/docs/changelogs/%s.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseBranch, ctx.Version.MajorMinor())
 		}
 
 		content, err := base64.StdEncoding.DecodeString(*file.Content)

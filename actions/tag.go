@@ -32,7 +32,7 @@ func (ctx Tag) Check() error {
 		return err
 	}
 	if tag == nil {
-		return fmt.Errorf("https://github.com/%s/%s/tags/%s does not exist (%w)", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ErrIncomplete)
+		return fmt.Errorf("⚠️ https://github.com/%s/%s/tags/%s does not exist (%w)", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ErrIncomplete)
 	}
 	return nil
 }
@@ -45,7 +45,7 @@ func (ctx Tag) Run() error {
 		return err
 	}
 	if branch == nil {
-		return fmt.Errorf("https://github.com/%s/%s/blob/%s does not exist", repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
+		return fmt.Errorf("🚨 https://github.com/%s/%s/blob/%s does not exist", repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
 	}
 
 	sha := branch.GetCommit().GetSHA()
@@ -63,7 +63,7 @@ Signature: %s
 
 Please approve if the tag is correct. When you do, the tag will be pushed to the remote repository.`, ref, ref.PGPSignature)
 		if !util.Confirm(prompt) {
-			return fmt.Errorf("creation of tag '%s' was not confirmed correctly", ctx.Version.String())
+			return fmt.Errorf("🚨 creation of tag '%s' was not confirmed correctly", ctx.Version.String())
 		}
 
 		return c.PushTag(ctx.Version.String())
