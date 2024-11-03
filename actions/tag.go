@@ -17,10 +17,11 @@ type Tag struct {
 }
 
 func (ctx Tag) getBranch() string {
-	if ctx.Version.IsPrerelease() {
+	// NOTE: for patch releases (and prereleases), we should use the the version release branch because the release branch might be ahead already
+	if ctx.Version.IsPrerelease() || ctx.Version.IsPatch() {
 		return repos.Kubo.VersionReleaseBranch(ctx.Version)
 	} else {
-		return repos.Kubo.ReleaseBranch // TODO: for patch releases, we should use the the version release branch because the release branch might be ahead already
+		return repos.Kubo.ReleaseBranch
 	}
 }
 
