@@ -62,7 +62,7 @@ func (ctx UpdateIPFSBlog) Run() error {
 		return err
 	}
 	if !util.ConfirmPR(pr) {
-		return fmt.Errorf("%s not merged", pr.GetHTMLURL())
+		return fmt.Errorf("🚨 %s not merged", pr.GetHTMLURL())
 	}
 	return nil
 }

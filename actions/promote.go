@@ -83,7 +83,7 @@ func (ctx Promote) Check() error {
 		return err
 	}
 	if issue == nil {
-		return fmt.Errorf("issue '%s' not found in https://github.com/%s/%s/issues (%w)", repos.Kubo.ReleaseIssueTitle(ctx.Version), repos.Kubo.Owner, repos.Kubo.Repo, ErrFailure)
+		return fmt.Errorf("⚠️ issue '%s' not found in https://github.com/%s/%s/issues (%w)", repos.Kubo.ReleaseIssueTitle(ctx.Version), repos.Kubo.Owner, repos.Kubo.Repo, ErrFailure)
 	}
 
 	comment, err := ctx.GitHub.GetIssueComment(repos.Kubo.Owner, repos.Kubo.Repo, issue.GetNumber(), ctx.getReleaseIssueComment())
@@ -91,7 +91,7 @@ func (ctx Promote) Check() error {
 		return err
 	}
 	if comment == nil {
-		return fmt.Errorf("comment '%s' not found in %s (%w)", ctx.getReleaseIssueComment(), issue.GetHTMLURL(), ErrIncomplete)
+		return fmt.Errorf("⚠️ comment '%s' not found in %s (%w)", ctx.getReleaseIssueComment(), issue.GetHTMLURL(), ErrIncomplete)
 	}
 
 	if ctx.Matrix == nil {
@@ -111,7 +111,7 @@ func (ctx Promote) Check() error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("post '%s' not found in https://matrix.to/#/#ipfs-chatter:ipfs.io (%w)", ctx.getDiscoursePostTitle(), ErrIncomplete)
+			return fmt.Errorf("⚠️ post '%s' not found in https://matrix.to/#/#ipfs-chatter:ipfs.io (%w)", ctx.getDiscoursePostTitle(), ErrIncomplete)
 		}
 	}
 
@@ -121,10 +121,10 @@ func (ctx Promote) Check() error {
 			return err
 		}
 		if release == nil {
-			return fmt.Errorf("release '%s' not found in https://github.com/%s/%s/releases (%w)", ctx.Version, repos.Kubo.Owner, repos.Kubo.Repo, ErrFailure)
+			return fmt.Errorf("⚠️ release '%s' not found in https://github.com/%s/%s/releases (%w)", ctx.Version, repos.Kubo.Owner, repos.Kubo.Repo, ErrFailure)
 		}
 		if !strings.Contains(release.GetBody(), "- 💬 [Discuss]") {
-			return fmt.Errorf("%s does not contain a discuss link (%w)", release.GetHTMLURL(), ErrIncomplete)
+			return fmt.Errorf("⚠️ %s does not contain a discuss link (%w)", release.GetHTMLURL(), ErrIncomplete)
 		}
 	}
 
@@ -141,7 +141,7 @@ func (ctx Promote) Run() error {
 		return err
 	}
 	if issue == nil {
-		return fmt.Errorf("issue '%s' not found in https://github.com/%s/%s/issues", repos.Kubo.ReleaseIssueTitle(ctx.Version), repos.Kubo.Owner, repos.Kubo.Repo)
+		return fmt.Errorf("🚨 issue '%s' not found in https://github.com/%s/%s/issues", repos.Kubo.ReleaseIssueTitle(ctx.Version), repos.Kubo.Owner, repos.Kubo.Repo)
 	}
 
 	_, err = ctx.GitHub.GetOrCreateIssueComment(repos.Kubo.Owner, repos.Kubo.Repo, issue.GetNumber(), ctx.getReleaseIssueComment())
@@ -161,7 +161,7 @@ Remember to pin the topic globally!
 
 Please approve once the post is up.`, ctx.getDiscoursePostTitle(), ctx.getDiscoursePostBody())
 	if !util.Confirm(prompt) {
-		return fmt.Errorf("creation of discourse post was not confirmed correctly")
+		return fmt.Errorf("🚨 creation of discourse post was not confirmed correctly")
 	}
 
 	if !ctx.Version.IsPrerelease() {
@@ -173,7 +173,7 @@ Use the following template:
 Please approve once the post is linked.`, url, strings.ReplaceAll(ctx.Version.String(), ".", "-"))
 
 		if !util.Confirm(prompt) {
-			return fmt.Errorf("%s does not contain a discuss link", url)
+			return fmt.Errorf("🚨 %s does not contain a discuss link", url)
 		}
 	}
 
@@ -186,7 +186,7 @@ Url: %s
 
 Please approve once the post is up.`, url)
 		if !util.Confirm(prompt) {
-			return fmt.Errorf("creation of reddit post was not confirmed correctly")
+			return fmt.Errorf("🚨 creation of reddit post was not confirmed correctly")
 		}
 
 		file, err := ctx.GitHub.GetFile(repos.Kubo.Owner, repos.Kubo.Repo, "docs/changelogs/"+ctx.Version.MajorMinor()+".md", "release")
@@ -194,7 +194,7 @@ Please approve once the post is up.`, url)
 			return err
 		}
 		if file == nil {
-			return fmt.Errorf("https://github.com/%s/%s/blob/release/docs/changelogs/%s.md not found", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.MajorMinor())
+			return fmt.Errorf("🚨 https://github.com/%s/%s/blob/release/docs/changelogs/%s.md not found", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.MajorMinor())
 		}
 
 		content, err := base64.StdEncoding.DecodeString(*file.Content)
@@ -219,7 +219,7 @@ What's happening?: #Kubo %s was just released!
 
 Please approve once the message is up.`, ctx.Version, strings.Join(highlights, "\n"), url)
 		if !util.Confirm(prompt) {
-			return fmt.Errorf("creation of twitter post was not confirmed correctly")
+			return fmt.Errorf("🚨 creation of twitter post was not confirmed correctly")
 		}
 	}
 

@@ -17,10 +17,11 @@ type Tag struct {
 }
 
 func (ctx Tag) getBranch() string {
-	if ctx.Version.IsPrerelease() {
+	// NOTE: for patch releases (and prereleases), we should use the the version release branch because the release branch might be ahead already
+	if ctx.Version.IsPrerelease() || ctx.Version.IsPatch() {
 		return repos.Kubo.VersionReleaseBranch(ctx.Version)
 	} else {
-		return repos.Kubo.ReleaseBranch // TODO: for patch releases, we should use the the version release branch because the release branch might be ahead already
+		return repos.Kubo.ReleaseBranch
 	}
 }
 
@@ -32,7 +33,7 @@ func (ctx Tag) Check() error {
 		return err
 	}
 	if tag == nil {
-		return fmt.Errorf("https://github.com/%s/%s/tags/%s does not exist (%w)", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ErrIncomplete)
+		return fmt.Errorf("⚠️ https://github.com/%s/%s/tags/%s does not exist (%w)", repos.Kubo.Owner, repos.Kubo.Repo, ctx.Version.String(), ErrIncomplete)
 	}
 	return nil
 }
@@ -45,7 +46,7 @@ func (ctx Tag) Run() error {
 		return err
 	}
 	if branch == nil {
-		return fmt.Errorf("https://github.com/%s/%s/blob/%s does not exist", repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
+		return fmt.Errorf("🚨 https://github.com/%s/%s/blob/%s does not exist", repos.Kubo.Owner, repos.Kubo.Repo, ctx.getBranch())
 	}
 
 	sha := branch.GetCommit().GetSHA()
@@ -63,7 +64,7 @@ Signature: %s
 
 Please approve if the tag is correct. When you do, the tag will be pushed to the remote repository.`, ref, ref.PGPSignature)
 		if !util.Confirm(prompt) {
-			return fmt.Errorf("creation of tag '%s' was not confirmed correctly", ctx.Version.String())
+			return fmt.Errorf("🚨 creation of tag '%s' was not confirmed correctly", ctx.Version.String())
 		}
 
 		return c.PushTag(ctx.Version.String())

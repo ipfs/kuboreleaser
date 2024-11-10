@@ -36,7 +36,7 @@ func (ctx PrepareNext) Check() error {
 		return err
 	}
 	if issue == nil {
-		return fmt.Errorf("issue '%s' not found in https://github.com/%s/%s/issues (%w)", title, repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
+		return fmt.Errorf("⚠️ issue '%s' not found in https://github.com/%s/%s/issues (%w)", title, repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
 	}
 
 	err = CheckPR(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, branch, true)
@@ -56,7 +56,7 @@ func (ctx PrepareNext) Run() error {
 		return err
 	}
 	if file == nil {
-		return fmt.Errorf("https://github.com/%s/%s/tree/%s/docs/RELEASE_ISSUE_TEMPLATE.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch)
+		return fmt.Errorf("🚨 https://github.com/%s/%s/tree/%s/docs/RELEASE_ISSUE_TEMPLATE.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch)
 	}
 
 	content, err := base64.StdEncoding.DecodeString(*file.Content)
@@ -129,7 +129,7 @@ func (ctx PrepareNext) Run() error {
 	}
 
 	if !util.ConfirmPR(pr) {
-		return fmt.Errorf("%s not merged", pr.GetHTMLURL())
+		return fmt.Errorf("🚨 %s not merged", pr.GetHTMLURL())
 	}
 
 	return nil

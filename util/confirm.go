@@ -8,7 +8,7 @@ import (
 
 func Confirm(prompt string) bool {
 	var confirmation string
-	fmt.Printf(`%s
+	fmt.Printf(`👉👉👉 %s
 
 Only 'yes' will be accepted to approve.
 

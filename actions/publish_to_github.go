@@ -3,7 +3,6 @@ package actions
 import (
 	"encoding/base64"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/ipfs/kuboreleaser/github"
@@ -25,7 +24,7 @@ func (ctx PublishToGitHub) Check() error {
 		return err
 	}
 	if release == nil {
-		return fmt.Errorf("release '%s' not found in https://github.com/%s/%s/releases (%w)", ctx.Version.String(), repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
+		return fmt.Errorf("⚠️ release '%s' not found in https://github.com/%s/%s/releases (%w)", ctx.Version.String(), repos.Kubo.Owner, repos.Kubo.Repo, ErrIncomplete)
 	}
 
 	return CheckWorkflowRun(ctx.GitHub, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch, repos.Kubo.SyncReleaseAssetsWorkflowName, repos.Kubo.SyncReleaseAssetsWorkflowJobName, ctx.Version.String())
@@ -43,7 +42,7 @@ func (ctx PublishToGitHub) Run() error {
 			return err
 		}
 		if file == nil {
-			return fmt.Errorf("https://github.com/%s/%s/blob/%s/docs/changelogs/%s.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseBranch, ctx.Version.MajorMinor())
+			return fmt.Errorf("🚨 https://github.com/%s/%s/blob/%s/docs/changelogs/%s.md not found", repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.ReleaseBranch, ctx.Version.MajorMinor())
 		}
 
 		content, err := base64.StdEncoding.DecodeString(*file.Content)
@@ -53,21 +52,18 @@ func (ctx PublishToGitHub) Run() error {
 
 		body = string(content)
 
-		index := strings.Index(body, "- [Overview](#overview)\n")
+		header := fmt.Sprintf("## %s\n", ctx.Version.MajorMinorPatch())
+
+		index := strings.Index(body, header)
 		if index != -1 {
-			index += len("- [Overview](#overview)\n")
-			body = body[index:]
+			body = body[index+len(header):]
+		} else {
+			body = "<!-- Please fill out the release description manually -->"
 		}
 
-		if ctx.Version.IsPatch() {
-			patch, err := strconv.Atoi(ctx.Version.Patch())
-			if err != nil {
-				return err
-			}
-			index = strings.Index(body, fmt.Sprintf("## %s.%d\n", ctx.Version.MajorMinor(), patch-1))
-			if index != -1 {
-				body = body[:index]
-			}
+		index = strings.Index(body, "## ")
+		if index != -1 {
+			body = body[:index]
 		}
 	}
 

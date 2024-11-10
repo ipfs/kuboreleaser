@@ -19,7 +19,7 @@ func NewClient() (*Client, error) {
 	token := util.GetenvPromptSecret("MATRIX_TOKEN", "If you don't have a token, you can leave it blank and use a password instead. Please enter the token:")
 	password := util.GetenvPromptSecret("MATRIX_PASSWORD", "If you don't have a password, you can leave it blank and use a token instead. Please enter the password:")
 	if token == "" && password == "" {
-		return nil, fmt.Errorf("MATRIX_TOKEN nor MATRIX_PASSWORD are set")
+		return nil, fmt.Errorf("⚠️ MATRIX_TOKEN nor MATRIX_PASSWORD are set")
 	}
 
 	matrix, err := gomatrix.NewClient(url, user, token)

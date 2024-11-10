@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	gh "github.com/google/go-github/v48/github"
@@ -186,7 +187,7 @@ func (ctx PrepareBranch) GetBody(branch, foreword string) (string, error) {
 		return "", err
 	}
 	if file == nil {
-		return "", fmt.Errorf("https://github.com/%s/%s/tree/%s/go.mod not found", repos.Kubo.Owner, repos.Kubo.Repo, branch)
+		return "", fmt.Errorf("🚨 https://github.com/%s/%s/tree/%s/go.mod not found", repos.Kubo.Owner, repos.Kubo.Repo, branch)
 	}
 
 	content, err := base64.StdEncoding.DecodeString(*file.Content)
@@ -204,7 +205,7 @@ func (ctx PrepareBranch) GetBody(branch, foreword string) (string, error) {
 		}
 	}
 	if boxoVersion == "" {
-		return "", fmt.Errorf("boxo version not found in https://github.com/%s/%s/tree/%s/go.mod", repos.Kubo.Owner, repos.Kubo.Repo, branch)
+		return "", fmt.Errorf("🚨 boxo version not found in https://github.com/%s/%s/tree/%s/go.mod", repos.Kubo.Owner, repos.Kubo.Repo, branch)
 	}
 
 	// find the boxo commit or tag in boxo version
@@ -254,7 +255,18 @@ func (ctx PrepareBranch) Run() error {
 	branch := repos.Kubo.VersionReleaseBranch(ctx.Version)
 	var source string
 	if ctx.Version.IsPatch() {
-		source = repos.Kubo.ReleaseBranch // TODO: this is not correct, we should use the previous patch release branch
+		// NOTE: For patch releases we want to create the new release branch from the previous release branch, e.g.
+		// when creating release-0.50.6, we want to create it from release-0.50.5
+		patchVersion, err := strconv.Atoi(ctx.Version.Patch())
+		if err != nil {
+			return err
+		}
+		previousVersionString := fmt.Sprintf("%s.%s", ctx.Version.MajorMinor(), strconv.Itoa(patchVersion-1))
+		previousVersion, err := util.NewVersion(previousVersionString)
+		if err != nil {
+			return err
+		}
+		source = repos.Kubo.VersionReleaseBranch(previousVersion)
 	} else {
 		source = repos.Kubo.DefaultBranch
 	}
@@ -264,6 +276,8 @@ func (ctx PrepareBranch) Run() error {
 	body := fmt.Sprintf("This PR creates release %s", ctx.Version.MajorMinorPatch())
 	draft := ctx.Version.IsPrerelease()
 
+	// NOTE: This should update const CurrentVersionNumber in version.go to the full version without a v prefix
+	// on the version release branch created from source
 	pr, err := ctx.UpdateVersion(branch, source, currentVersionNumber, base, title, body, draft)
 	if err != nil {
 		return err
@@ -280,7 +294,7 @@ func (ctx PrepareBranch) Run() error {
 		return err
 	}
 
-	fmt.Printf("Your release PR is ready at %s\n", pr.GetHTMLURL())
+	fmt.Printf("💁 Your release PR is ready at %s\n", pr.GetHTMLURL())
 
 	// TODO: check for conflicts and tell the user to resolve them
 	// or resolve them automatically with git merge origin/release -X ours
@@ -291,7 +305,7 @@ git cherry-pick -x <commit>
 
 Please approve after all the required commits are cherry-picked.`, branch, repos.Kubo.Owner, repos.Kubo.Repo, repos.Kubo.DefaultBranch)
 	if !util.Confirm(prompt) {
-		return fmt.Errorf("cherry-picking commits to https://github.com/%s/%s/tree/%s was not confirmed correctly", repos.Kubo.Owner, repos.Kubo.Repo, branch)
+		return fmt.Errorf("🚨 cherry-picking commits to https://github.com/%s/%s/tree/%s was not confirmed correctly", repos.Kubo.Owner, repos.Kubo.Repo, branch)
 	}
 
 	if !ctx.Version.IsPrerelease() {
@@ -302,7 +316,7 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 
 		fmt.Println("Use merge commit to merge this PR! You'll have to tag it after the merge.")
 		if !util.ConfirmPR(pr) {
-			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
+			return fmt.Errorf("🚨 %s not merged", pr.GetHTMLURL())
 		}
 	}
 
@@ -321,9 +335,9 @@ Please approve after all the required commits are cherry-picked.`, branch, repos
 		}
 
 		if ctx.Version.IsPrerelease() {
-			fmt.Printf(`Release PR ready at %s. Do not merge it.`, pr.GetHTMLURL())
+			fmt.Printf(`💁 Release PR ready at %s. Do not merge it.`, pr.GetHTMLURL())
 		} else if !pr.GetMerged() && !util.ConfirmPR(pr) {
-			return fmt.Errorf("%s not merged", pr.GetHTMLURL())
+			return fmt.Errorf("🚨 %s not merged", pr.GetHTMLURL())
 		}
 	}
 
