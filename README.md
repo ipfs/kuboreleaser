@@ -1,3 +1,9 @@
+> [!WARNING]
+>
+> # ⚠️  `kuboreleaser` is no longer maintained
+>
+> We've switched to simplified manual checklist: https://github.com/ipfs/kubo/blob/master/docs/RELEASE_CHECKLIST.md
+
 # KuboReleaser
 
 KuboReleaser is a CLI tool intended to help with the automation of [the release process of Kubo](https://github.com/ipfs/kubo/blob/master/docs/RELEASE_ISSUE_TEMPLATE.md).
